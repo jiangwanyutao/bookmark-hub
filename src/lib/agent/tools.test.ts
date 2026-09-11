@@ -95,6 +95,12 @@ describe('list_bookmarks', () => {
   it('rejects unknown folders', async () => {
     await expect(run('list_bookmarks', { folderId: '99' })).rejects.toThrow('目录不存在：99');
   });
+
+  it('says there is nothing more when the page is empty', async () => {
+    const result = await run('list_bookmarks', { folderId: '2', offset: 3 });
+    expect(result.text.split('\n')).toEqual(['目录「其他书签」共 3 个书签，没有更多了。']);
+    expect(result.details).toEqual({ refs: [] });
+  });
 });
 
 describe('scope, taxonomy and assign', () => {

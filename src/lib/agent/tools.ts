@@ -123,6 +123,9 @@ export function createOrganizeTools(ctx: ToolContext): AgentTool<any>[] {
         .filter((x): x is { ref: string; line: string } => x !== null);
       const size = Math.min(limit, LIST_PAGE_MAX);
       const page = lines.slice(offset, offset + size);
+      if (page.length === 0) {
+        return reply(`目录「${path}」共 ${lines.length} 个书签，没有更多了。`, { details: { refs: [] } });
+      }
       const end = offset + page.length;
       const text = [
         `目录「${path}」共 ${lines.length} 个书签，第 ${offset + 1}–${end} 个：`,
@@ -152,7 +155,7 @@ export function createOrganizeTools(ctx: ToolContext): AgentTool<any>[] {
     parameters: Type.Object({ refs: Type.Array(Type.String()), category: Type.String() }),
     execute: async (_id, { refs, category }) => {
       const unknown = refs.find((ref) => !ctx.refs.toId(ref));
-      if (unknown) throw new Error(`编号不存在：${unknown}`);
+      if (unknown) throw new Error(`编号不存在：${unknown}，只能使用 list_bookmarks 返回的编号`);
       const { index } = snapshot(ctx);
       const plan = ctx.getPlan();
       const next = assignBookmarks(plan, refs.map((ref) => ctx.refs.toId(ref)!), category, inScopeOf(plan, index.bookmarks));
