@@ -22,24 +22,24 @@ export const emptyPlan = (): OrganizePlan => ({ scope: null, categories: [], ass
 
 export function normalizeCategory(path: string): string {
   const parts = path.split('/').map((part) => part.trim());
-  if (parts.some((part) => part.length === 0)) throw new Error(`分类名称不能为空`);
-  if (parts.length > MAX_CATEGORY_DEPTH) throw new Error(`最多 ${MAX_CATEGORY_DEPTH} 层`);
+  if (parts.some((part) => part.length === 0)) throw new Error(`分类名称不能为空：「${path}」`);
+  if (parts.length > MAX_CATEGORY_DEPTH) throw new Error(`分类「${path}」超过限制：最多 ${MAX_CATEGORY_DEPTH} 层`);
   const tooLong = parts.find((part) => part.length > MAX_CATEGORY_NAME);
-  if (tooLong) throw new Error(`不超过 ${MAX_CATEGORY_NAME} 个字`);
+  if (tooLong) throw new Error(`分类名「${tooLong}」太长：每级不超过 ${MAX_CATEGORY_NAME} 个字`);
   return parts.join(CATEGORY_SEPARATOR);
 }
 
 export function setScope(plan: OrganizePlan, scope: PlanScope, knownFolderIds: Set<string>): OrganizePlan {
-  if (scope.folderIds.length === 0) throw new Error('至少选择一个目录');
+  if (scope.folderIds.length === 0) throw new Error('整理范围至少选择一个目录');
   const unknown = [...scope.folderIds, scope.rootFolderId].find((id) => !knownFolderIds.has(id));
-  if (unknown) throw new Error(`目录不存在：${unknown}`);
+  if (unknown) throw new Error(`目录不存在：${unknown}，请先用 list_folders 查看目录 id`);
   return { ...plan, scope: { folderIds: [...scope.folderIds], rootFolderId: scope.rootFolderId }, assignments: {} };
 }
 
 export function proposeTaxonomy(plan: OrganizePlan, categories: string[]): OrganizePlan {
   const normalized = [...new Set(categories.map(normalizeCategory))];
-  if (normalized.length === 0) throw new Error('至少需要一个分类');
-  if (normalized.length > MAX_CATEGORIES) throw new Error(`最多 ${MAX_CATEGORIES} 个分类`);
+  if (normalized.length === 0) throw new Error('分类体系至少需要一个分类');
+  if (normalized.length > MAX_CATEGORIES) throw new Error(`分类太多：最多 ${MAX_CATEGORIES} 个分类`);
   const kept = Object.fromEntries(Object.entries(plan.assignments).filter(([, category]) => normalized.includes(category)));
   return { ...plan, categories: normalized, assignments: kept };
 }
@@ -50,13 +50,13 @@ export function assignBookmarks(
   category: string,
   inScope: (id: string) => boolean,
 ): OrganizePlan {
-  if (!plan.scope) throw new Error('请先确认整理范围');
+  if (!plan.scope) throw new Error('请先确认整理范围（set_scope），再分配书签');
   const target = normalizeCategory(category);
   if (!plan.categories.includes(target)) {
-    throw new Error(`分类「${target}」不在当前体系中`);
+    throw new Error(`分类「${target}」不在当前体系中。现有分类：${plan.categories.join('、')}`);
   }
   const outside = bookmarkIds.filter((id) => !inScope(id));
-  if (outside.length > 0) throw new Error(`${outside.length} 个书签不在整理范围内`);
+  if (outside.length > 0) throw new Error(`${outside.length} 个书签不在整理范围内，不能分配`);
   return { ...plan, assignments: { ...plan.assignments, ...Object.fromEntries(bookmarkIds.map((id) => [id, target])) } };
 }
 
