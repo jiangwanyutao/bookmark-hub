@@ -27,7 +27,7 @@ function writeSelected(id: string) {
 
 // 浏览器本地缓存的网站图标（favicon 权限），不发网络请求
 const faviconUrl = (pageUrl: string) =>
-  `${location.origin}/_favicon/?pageUrl=${encodeURIComponent(pageUrl)}&size=32`;
+  `${location.origin}/_favicon/?pageUrl=${encodeURIComponent(pageUrl)}&size=64`;
 
 const siteName = (url: string) => {
   try {
@@ -47,23 +47,23 @@ function Tile({ item }: { item: TileItem }) {
       target="_blank"
       rel="noreferrer"
       title={`${name}\n${item.url}`}
-      className="flex w-20 flex-col items-center gap-1.5 rounded-xl p-2 outline-none hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring"
+      className="flex min-w-0 flex-col items-center gap-2 rounded-2xl p-3 outline-none hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <span className="flex size-12 items-center justify-center overflow-hidden rounded-xl bg-card shadow-sm ring-1 ring-border">
+      <span className="flex size-16 items-center justify-center overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-border">
         {broken ? (
-          <span className="text-lg font-semibold text-primary">{name.slice(0, 1).toUpperCase()}</span>
+          <span className="text-2xl font-semibold text-primary">{name.slice(0, 1).toUpperCase()}</span>
         ) : (
-          <img src={faviconUrl(item.url)} alt="" width={28} height={28} onError={() => setBroken(true)} />
+          <img src={faviconUrl(item.url)} alt="" width={40} height={40} onError={() => setBroken(true)} />
         )}
       </span>
-      <span className="w-full truncate text-center text-xs">{name}</span>
+      <span className="w-full truncate text-center text-sm">{name}</span>
     </a>
   );
 }
 
 function TileGrid({ items }: { items: TileItem[] }) {
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-2">
       {items.map((item) => (
         <Tile key={item.id} item={item} />
       ))}
@@ -99,9 +99,9 @@ export function LauncherView({ roots, index }: Props) {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-6 pt-10 pb-16">
-      <div className="relative mx-auto max-w-2xl">
-        <Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted-foreground" />
+    <div className="px-8 pt-10 pb-16">
+      <div className="relative mx-auto max-w-3xl">
+        <Search className="pointer-events-none absolute top-1/2 left-5 size-6 -translate-y-1/2 text-muted-foreground" />
         <input
           id="launcher-search"
           type="search"
@@ -111,7 +111,7 @@ export function LauncherView({ roots, index }: Props) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="h-12 w-full rounded-full border bg-card pr-5 pl-12 text-base shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="h-14 w-full rounded-full border bg-card pr-6 pl-14 text-lg shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       </div>
 
@@ -127,20 +127,20 @@ export function LauncherView({ roots, index }: Props) {
       ) : categories.length === 0 ? (
         <p className="mt-10 text-center text-sm text-muted-foreground">还没有书签。</p>
       ) : (
-        <div className="mt-10 grid grid-cols-[160px_1fr] gap-8">
-          <nav aria-label="书签分类" className="flex flex-col gap-0.5">
+        <div className="mt-10 grid grid-cols-[200px_1fr] gap-10">
+          <nav aria-label="书签分类" className="sticky top-4 flex flex-col gap-1 self-start">
             {categories.map((c) => (
               <button
                 key={c.id}
                 type="button"
                 onClick={() => select(c.id)}
                 className={cn(
-                  'flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm outline-none hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring',
+                  'flex items-center justify-between gap-2 rounded-xl px-4 py-2.5 text-left text-base outline-none hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring',
                   c.id === selected?.id && 'bg-accent font-medium text-accent-foreground',
                 )}
               >
                 <span className="truncate">{c.name}</span>
-                <span className="text-xs text-muted-foreground tabular-nums">{c.count}</span>
+                <span className="text-sm text-muted-foreground tabular-nums">{c.count}</span>
               </button>
             ))}
           </nav>
@@ -148,7 +148,7 @@ export function LauncherView({ roots, index }: Props) {
           <section aria-label={selected?.name} className="min-w-0 space-y-6">
             {selected?.sections.map((s) => (
               <div key={s.title ?? '_direct'} className="space-y-2">
-                {s.title && <h2 className="px-2 text-xs font-medium text-muted-foreground">{s.title}</h2>}
+                {s.title && <h2 className="px-3 text-sm font-medium text-muted-foreground">{s.title}</h2>}
                 <TileGrid items={s.items} />
               </div>
             ))}
