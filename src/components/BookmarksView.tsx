@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { searchBookmarks, type BookmarkIndex, type TreeNode } from '../lib/bookmarks';
+import { searchBookmarks, type BookmarkIndex, type TreeNode } from '@/lib/bookmarks';
 import { FolderTree } from './FolderTree';
 import { BookmarkList } from './BookmarkList';
 import { BookmarkDetail } from './BookmarkDetail';
@@ -23,15 +23,17 @@ export function BookmarksView({ roots, index, query, folderId, onSelectFolder }:
   const selected = index.bookmarks.find((b) => b.id === selectedId);
 
   return (
-    <div className="bookmarks-view">
+    <div className="grid h-full grid-cols-[260px_1fr_320px]">
       <FolderTree
         roots={roots}
         countByFolder={index.countByFolder}
         selectedId={folderId}
         onSelect={onSelectFolder}
       />
-      <section className="list-pane">
-        <p className="list-count">{visible.length.toLocaleString('zh-CN')} 个书签</p>
+      <section className="flex min-h-0 min-w-0 flex-col">
+        <p className="border-b px-4 py-2 text-sm text-muted-foreground">
+          {visible.length.toLocaleString('zh-CN')} 个书签
+        </p>
         <BookmarkList bookmarks={visible} selectedId={selectedId} onSelect={setSelectedId} />
       </section>
       <BookmarkDetail bookmark={selected} />
