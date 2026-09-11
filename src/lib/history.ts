@@ -15,10 +15,18 @@ export interface BookmarksApi {
   removeTree(id: string): Promise<void>;
 }
 
+/** 要新建的节点：没有 url 即为目录；快照里的 TreeNode 可以直接传入。 */
+export interface CreateNode {
+  title: string;
+  url?: string;
+  children?: CreateNode[];
+}
+
 export type Intent =
   | { type: 'remove'; id: string }
   | { type: 'move'; id: string; parentId: string; index?: number }
-  | { type: 'update'; id: string; title?: string; url?: string };
+  | { type: 'update'; id: string; title?: string; url?: string }
+  | { type: 'create'; parentId: string; index?: number; node: CreateNode };
 
 export interface Position {
   parentId: string;
@@ -33,7 +41,9 @@ export interface Fields {
 export type Op =
   | { action: 'REMOVE'; node: TreeNode; parentId: string; index: number }
   | { action: 'MOVE'; id: string; before: Position; after: Position }
-  | { action: 'UPDATE'; id: string; before: Fields; after: Fields };
+  | { action: 'UPDATE'; id: string; before: Fields; after: Fields }
+  /** node 是新建出来的整棵子树（新 id），撤销时用来判断用户之后有没有动过 */
+  | { action: 'CREATE'; id: string; node: TreeNode };
 
 export interface Batch {
   id: string;
@@ -116,7 +126,7 @@ async function perform(ctx: Ctx, intent: Intent): Promise<Op> {
       const before = first(await ctx.api.get(intent.id));
       const after = await ctx.api.move(intent.id, {
         parentId: intent.parentId,
-        ...(intent.index !== undefined && { index: intent.index }),
+        ...(intent.index !== undefined && { index: await clampIndex(ctx, intent.parentId, intent.index) }),
       });
       return { action: 'MOVE', id: intent.id, before: position(before), after: position(after) };
     }
@@ -127,6 +137,10 @@ async function perform(ctx: Ctx, intent: Intent): Promise<Op> {
         ...(intent.url !== undefined && { url: intent.url }),
       });
       return { action: 'UPDATE', id: intent.id, before: fields(before), after: fields(after) };
+    }
+    case 'create': {
+      const created = await createTree(ctx, intent.node, intent.parentId, intent.index);
+      return { action: 'CREATE', id: created.id, node: first(await ctx.api.getSubTree(created.id)) };
     }
   }
 }
@@ -148,18 +162,49 @@ export async function applyBatch(ctx: Ctx, label: string, intents: Intent[]): Pr
   return batch;
 }
 
-async function recreate(ctx: Ctx, node: TreeNode, parentId: string, index: number) {
+/** 按原结构重建一棵子树；onCreated 在每个节点建好后调用。 */
+async function createTree<N extends CreateNode>(
+  ctx: Ctx,
+  node: N,
+  parentId: string,
+  index: number | undefined,
+  onCreated?: (source: N, created: TreeNode) => Promise<void>,
+): Promise<TreeNode> {
   const created = await ctx.api.create({
     parentId,
-    index: await clampIndex(ctx, parentId, index),
+    ...(index !== undefined && { index: await clampIndex(ctx, parentId, index) }),
     title: node.title,
     ...(node.url !== undefined && { url: node.url }),
   });
-  // ponytail: 同一书签被删→恢复多次时，这里记的是上一次恢复的时间；要追溯最初时间需给 idMap 加 newId 索引
-  await ctx.db.put('idMap', { oldId: node.id, newId: created.id, originalDateAdded: node.dateAdded });
-  for (const [i, child] of (node.children ?? []).entries()) {
-    await recreate(ctx, child, created.id, i);
+  await onCreated?.(node, created);
+  for (const child of node.children ?? []) {
+    await createTree(ctx, child as N, created.id, undefined, onCreated);
   }
+  return created;
+}
+
+/** 撤销删除：重建子树，并把旧 id → 新 id 写入映射。 */
+async function recreate(ctx: Ctx, node: TreeNode, parentId: string, index: number) {
+  await createTree(ctx, node, parentId, index, async (source, created) => {
+    // ponytail: 同一书签被删→恢复多次时，这里记的是上一次恢复的时间；要追溯最初时间需给 idMap 加 newId 索引
+    await ctx.db.put('idMap', { oldId: source.id, newId: created.id, originalDateAdded: source.dateAdded });
+  });
+}
+
+async function getSubTreeNode(api: BookmarksApi, id: string): Promise<TreeNode | undefined> {
+  try {
+    return (await api.getSubTree(id))[0];
+  } catch {
+    return undefined;
+  }
+}
+
+const collectIds = (node: TreeNode): string[] => [node.id, ...(node.children ?? []).flatMap(collectIds)];
+
+function sameIds(a: TreeNode, b: TreeNode) {
+  const ids = collectIds(a);
+  const expected = new Set(collectIds(b));
+  return ids.length === expected.size && ids.every((id) => expected.has(id));
 }
 
 /** 撤销一条操作；当前状态已不是操作后的样子（用户手动改过）时返回 false。 */
@@ -188,6 +233,14 @@ async function undoOp(ctx: Ctx, op: Op): Promise<boolean> {
         title: op.before.title,
         ...(op.before.url !== undefined && { url: op.before.url }),
       });
+      return true;
+    }
+    case 'CREATE': {
+      const current = await getSubTreeNode(ctx.api, await resolveId(ctx, op.id));
+      // 用户之后往里加过或删过东西，就不动它
+      if (!current || !sameIds(current, op.node)) return false;
+      if (current.url === undefined) await ctx.api.removeTree(current.id);
+      else await ctx.api.remove(current.id);
       return true;
     }
   }

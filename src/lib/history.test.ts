@@ -146,6 +146,30 @@ describe('undo rules', () => {
   });
 });
 
+describe('create', () => {
+  const subtree = { title: '开发', children: [{ title: 'A', url: 'https://a.example.com/' }] };
+
+  it('recreates a whole subtree, and undo removes it again', async () => {
+    const batch = await applyBatch(ctx, '恢复', [{ type: 'create', parentId: '1', index: 0, node: subtree }]);
+
+    const [folder] = await ctx.api.getChildren('1');
+    expect(folder!.title).toBe('开发');
+    expect(await titlesIn(folder!.id)).toEqual(['A']);
+
+    expect(await undoBatch(ctx, batch.id)).toEqual({ undone: 1, skipped: 0 });
+    expect(await titlesIn('1')).toEqual([]);
+  });
+
+  it('keeps the recreated folder on undo when the user has added something to it since', async () => {
+    const batch = await applyBatch(ctx, '恢复', [{ type: 'create', parentId: '1', node: subtree }]);
+    const [folder] = await ctx.api.getChildren('1');
+    await add('手动加的', folder!.id);
+
+    expect(await undoBatch(ctx, batch.id)).toEqual({ undone: 0, skipped: 1 });
+    expect(await titlesIn('1')).toEqual(['开发']);
+  });
+});
+
 describe('applyBatch', () => {
   it('lists batches newest first', async () => {
     const a = await add('A');
