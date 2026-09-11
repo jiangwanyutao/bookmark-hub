@@ -73,7 +73,8 @@ const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 manifest.host_permissions = ['<all_urls>'];
 fs.writeFileSync(manifestPath, JSON.stringify(manifest));
 
-const ctx = await chromium.launchPersistentContext(fs.mkdtempSync(path.join(os.tmpdir(), 'bh-e2e-')), {
+const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'bh-e2e-'));
+const ctx = await chromium.launchPersistentContext(userDataDir, {
   headless: false,
   args: [
     `--disable-extensions-except=${extDir}`,
@@ -133,4 +134,6 @@ try {
 } finally {
   await ctx.close();
   server.close();
+  fs.rmSync(extDir, { recursive: true, force: true });
+  fs.rmSync(userDataDir, { recursive: true, force: true });
 }
