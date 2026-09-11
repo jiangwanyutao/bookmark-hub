@@ -66,6 +66,23 @@ export function categorize(roots: TreeNode[]): Category[] {
   return categories;
 }
 
+/** 分类里各二级目录名（section 标题首段），按出现顺序去重；无子目录时为空。 */
+export function subfolderTabs(sections: TileSection[]): string[] {
+  const tabs: string[] = [];
+  for (const s of sections) {
+    if (!s.title) continue;
+    const tab = s.title.split(PATH_SEPARATOR)[0]!;
+    if (!tabs.includes(tab)) tabs.push(tab);
+  }
+  return tabs;
+}
+
+/** tab 为 null（全部）时原样返回；否则只保留标题首段等于 tab 的分组。 */
+export function sectionsForTab(sections: TileSection[], tab: string | null): TileSection[] {
+  if (tab === null) return sections;
+  return sections.filter((s) => s.title?.split(PATH_SEPARATOR)[0] === tab);
+}
+
 const LOCAL_HOST = /^localhost(:\d+)?$/i;
 const IPV4_HOST = /^\d{1,3}(\.\d{1,3}){3}(:\d+)?$/;
 // 顶级域名至少两个字母，避免把「a.b」这类当成网址

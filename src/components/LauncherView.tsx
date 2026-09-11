@@ -3,7 +3,7 @@ import { Search } from 'lucide-react';
 import { browser } from 'wxt/browser';
 import { useTags } from '@/hooks/useTags';
 import { searchBookmarks, type BookmarkIndex, type TreeNode } from '@/lib/bookmarks';
-import { categorize, toNavigableUrl, type TileItem } from '@/lib/launcher';
+import { categorize, sectionsForTab, subfolderTabs, toNavigableUrl, type TileItem } from '@/lib/launcher';
 import { cn } from '@/lib/utils';
 
 const SELECTED_KEY = 'launcher:category';
@@ -81,13 +81,17 @@ export function LauncherView({ roots, index }: Props) {
   const categories = useMemo(() => categorize(roots), [roots]);
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(readSelected);
+  const [tab, setTab] = useState<string | null>(null);
 
   const selected = categories.find((c) => c.id === selectedId) ?? categories[0];
+  const tabs = selected ? subfolderTabs(selected.sections) : [];
+  const activeTab = tab !== null && tabs.includes(tab) ? tab : null;
   const results = query.trim() ? searchBookmarks(index.bookmarks, query, tags) : null;
 
   function select(id: string) {
     setSelectedId(id);
     writeSelected(id);
+    setTab(null);
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
@@ -146,7 +150,30 @@ export function LauncherView({ roots, index }: Props) {
           </nav>
 
           <section aria-label={selected?.name} className="min-w-0 space-y-6">
-            {selected?.sections.map((s) => (
+            {tabs.length > 0 && (
+              <div role="tablist" aria-label="二级目录" className="flex flex-wrap gap-2">
+                {['全部', ...tabs].map((label, i) => {
+                  const value = i === 0 ? null : label;
+                  const isActive = activeTab === value;
+                  return (
+                    <button
+                      key={label}
+                      type="button"
+                      role="tab"
+                      aria-selected={isActive}
+                      onClick={() => setTab(value)}
+                      className={cn(
+                        'rounded-xl px-4 py-2 text-sm outline-none hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring',
+                        isActive && 'bg-accent font-medium text-accent-foreground',
+                      )}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {selected && sectionsForTab(selected.sections, activeTab).map((s) => (
               <div key={s.title ?? '_direct'} className="space-y-2">
                 {s.title && <h2 className="px-3 text-sm font-medium text-muted-foreground">{s.title}</h2>}
                 <TileGrid items={s.items} />

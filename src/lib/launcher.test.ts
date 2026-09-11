@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TreeNode } from './bookmarks';
-import { categorize, toNavigableUrl } from './launcher';
+import { categorize, sectionsForTab, subfolderTabs, toNavigableUrl, type TileSection } from './launcher';
 
 const bm = (id: string, title: string): TreeNode => ({ id, title, url: `https://${id}.example.com/` });
 
@@ -60,6 +60,31 @@ describe('categorize', () => {
 
   it('returns nothing for an empty tree', () => {
     expect(categorize([])).toEqual([]);
+  });
+});
+
+const withItems = (title: string | null): TileSection => ({ title, items: [] });
+
+describe('subfolderTabs', () => {
+  it('returns first segments in tree order without duplicates', () => {
+    const sections = [null, '前端', '前端 / React', '后端'].map(withItems);
+    expect(subfolderTabs(sections)).toEqual(['前端', '后端']);
+  });
+
+  it('returns an empty array when only the null section exists', () => {
+    expect(subfolderTabs([withItems(null)])).toEqual([]);
+  });
+});
+
+describe('sectionsForTab', () => {
+  const sections = [null, '前端', '前端 / React', '后端'].map(withItems);
+
+  it('returns all sections for 全部 (null)', () => {
+    expect(sectionsForTab(sections, null)).toEqual(sections);
+  });
+
+  it('returns only the matching subfolder sections for a given tab', () => {
+    expect(sectionsForTab(sections, '前端')).toEqual([sections[1], sections[2]]);
   });
 });
 
