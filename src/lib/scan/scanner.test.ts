@@ -8,6 +8,7 @@ import {
   PROBE_URLS,
   cancelScan,
   probeNetwork,
+  recheckUrls,
   runScan,
   scanTargets,
   summarizeHealth,
@@ -126,6 +127,23 @@ describe('runScan', () => {
   });
 });
 
+describe('recheckUrls', () => {
+  it('saves fresh results for the given urls without touching the current run', async () => {
+    await db.put('scanResults', { ...resultFor('https://a.com/'), health: 'broken', failReason: 'not_found' });
+
+    expect(await recheckUrls(deps(async (url) => okObs(url)), ['https://a.com/'])).toBe('done');
+
+    expect(await db.get('scanResults', 'https://a.com/')).toMatchObject({ health: 'healthy', failReason: null });
+    expect(await db.get('scanRuns', 'current')).toBeUndefined();
+  });
+
+  it('does not check anything when offline', async () => {
+    const check = vi.fn(async (url: string) => okObs(url));
+    expect(await recheckUrls(deps(check, async () => 'offline'), ['https://a.com/'])).toBe('offline');
+    expect(check).not.toHaveBeenCalled();
+  });
+});
+
 describe('cancelScan', () => {
   it('marks the current run finished so the next scan starts over', async () => {
     await db.put('scanRuns', { id: 'current', startedAt: 1, finishedAt: null });
@@ -170,6 +188,12 @@ describe('summarizeHealth', () => {
       pending: 2,
       skipped: 1,
       unscanned: 1,
+      ignored: 0,
+    });
+    expect(summarizeHealth(bookmarks, results, new Set(['https://gone.com/', 'https://ok.com/']))).toMatchObject({
+      healthy: 2,
+      broken: 0,
+      ignored: 1,
     });
   });
 });

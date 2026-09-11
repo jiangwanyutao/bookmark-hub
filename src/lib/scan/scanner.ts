@@ -24,12 +24,19 @@ const REPROBE_AFTER_NETWORK_FAILURES = 10;
 
 export type ProbeResult = NetworkMode | 'offline';
 export type ScanOutcome = 'finished' | 'aborted' | 'offline';
+export type RecheckOutcome = 'done' | 'offline';
 
 /** 当前这一轮扫描；未结束时再次开始即为续扫。 */
 export interface ScanRun {
   id: 'current';
   startedAt: number;
   finishedAt: number | null;
+}
+
+/** 用户选择忽略的网址，不计入问题列表和健康分。 */
+export interface IgnoredUrl {
+  url: string;
+  ignoredAt: number;
 }
 
 export interface ScanDeps {
@@ -54,6 +61,7 @@ export interface HealthSummary {
   pending: number;
   skipped: number;
   unscanned: number;
+  ignored: number;
 }
 
 /** 国内、境外各探一个地址：都不通为离线，只有境外不通为受限。 */
@@ -81,6 +89,19 @@ const countHealth = (results: ScanResult[]) => {
   for (const r of results) counts[r.health] += 1;
   return counts;
 };
+
+async function saveResult(deps: ScanDeps, url: string, obs: Observation, networkMode: NetworkMode) {
+  const result: ScanResult = {
+    url,
+    ...classify(obs, networkMode),
+    httpStatus: obs.status ?? null,
+    netError: obs.netError ?? null,
+    networkMode,
+    checkedAt: deps.now(),
+  };
+  await deps.db.put('scanResults', result);
+  return result;
+}
 
 async function currentRun(deps: ScanDeps): Promise<ScanRun> {
   const existing = await deps.db.get('scanRuns', 'current');
@@ -123,19 +144,6 @@ export async function runScan(
   signal.addEventListener('abort', stopQueue);
   const report = () => onProgress({ total: urls.length, done, networkMode, counts: { ...counts } });
 
-  const save = async (url: string, obs: Observation) => {
-    const result: ScanResult = {
-      url,
-      ...classify(obs, networkMode),
-      httpStatus: obs.status ?? null,
-      netError: obs.netError ?? null,
-      networkMode,
-      checkedAt: deps.now(),
-    };
-    await deps.db.put('scanResults', result);
-    return result;
-  };
-
   const reprobe = async () => {
     const mode = await deps.probe();
     if (mode === 'offline') {
@@ -153,7 +161,7 @@ export async function runScan(
       async (url) => {
         const obs = await deps.check(url, networkMode);
         if (stoppedOffline) return;
-        const result = await save(url, obs);
+        const result = await saveResult(deps, url, obs, networkMode);
         counts[result.health] += 1;
         done += 1;
         if (result.failReason === 'dns') dnsFailures.push(url);
@@ -185,7 +193,7 @@ export async function runScan(
   // ponytail: DNS 失败在扫描末尾统一重试一次；网址很少时离首次失败可能不足 PRD 说的 30 秒
   for (const url of dnsFailures) {
     if (signal.aborted) return 'aborted';
-    await save(url, await deps.check(url, networkMode));
+    await saveResult(deps, url, await deps.check(url, networkMode), networkMode);
   }
 
   const latest = await resultsInRun(deps, urls, run);
@@ -199,15 +207,41 @@ export async function runScan(
   return 'finished';
 }
 
+/** 重新检测指定网址（列表页用），不影响当前这一轮扫描的进度。 */
+export async function recheckUrls(deps: ScanDeps, urls: string[]): Promise<RecheckOutcome> {
+  const mode = await deps.probe();
+  if (mode === 'offline') return 'offline';
+  await runQueue(
+    urls,
+    async (url) => {
+      await saveResult(deps, url, await deps.check(url, mode), mode);
+    },
+    { concurrency: GLOBAL_CONCURRENCY, perKey: PER_HOST_CONCURRENCY, keyOf: hostOf },
+  );
+  return 'done';
+}
+
 /** 放弃当前这一轮的进度，下次扫描从头开始（已有结果保留）。 */
 export async function cancelScan(db: IDBPDatabase<HubDB>, now: number): Promise<void> {
   const run = await db.get('scanRuns', 'current');
   if (run && run.finishedAt === null) await db.put('scanRuns', { ...run, finishedAt: now });
 }
 
-/** 按书签（不是网址）统计健康状态，重复书签各算一次。 */
-export function summarizeHealth(bookmarks: { url: string }[], results: Map<string, ScanResult>): HealthSummary {
-  const summary: HealthSummary = { healthy: 0, redirected: 0, broken: 0, pending: 0, skipped: 0, unscanned: 0 };
+export async function setIgnored(db: IDBPDatabase<HubDB>, urls: string[], ignored: boolean, now: number) {
+  const tx = db.transaction('ignoredUrls', 'readwrite');
+  await Promise.all([
+    ...urls.map((url) => (ignored ? tx.store.put({ url, ignoredAt: now }) : tx.store.delete(url))),
+    tx.done,
+  ]);
+}
+
+/** 按书签（不是网址）统计健康状态，重复书签各算一次；已忽略的单独计数。 */
+export function summarizeHealth(
+  bookmarks: { url: string }[],
+  results: Map<string, ScanResult>,
+  ignored: Set<string> = new Set(),
+): HealthSummary {
+  const summary: HealthSummary = { healthy: 0, redirected: 0, broken: 0, pending: 0, skipped: 0, unscanned: 0, ignored: 0 };
   for (const { url } of bookmarks) {
     if (skipReason(url)) {
       summary.skipped += 1;
@@ -215,6 +249,7 @@ export function summarizeHealth(bookmarks: { url: string }[], results: Map<strin
     }
     const r = results.get(url);
     if (!r) summary.unscanned += 1;
+    else if (r.health !== 'healthy' && ignored.has(url)) summary.ignored += 1;
     else if (r.health === 'suspicious' || r.health === 'unknown') summary.pending += 1;
     else summary[r.health] += 1;
   }

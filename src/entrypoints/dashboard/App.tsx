@@ -1,24 +1,44 @@
 import { useMemo, useState } from 'react';
-import { Activity, Copy, History, LayoutDashboard, List, Search } from 'lucide-react';
+import {
+  Activity,
+  CircleHelp,
+  Copy,
+  CornerUpRight,
+  History,
+  LayoutDashboard,
+  Link2Off,
+  List,
+  Search,
+} from 'lucide-react';
 import { useBookmarkTree } from '@/hooks/useBookmarkTree';
 import { buildIndex } from '@/lib/bookmarks';
+import { bookmarksBarId } from '@/lib/health';
 import { Overview } from '@/components/Overview';
 import { BookmarksView } from '@/components/BookmarksView';
 import { HistoryView } from '@/components/HistoryView';
 import { DuplicatesView } from '@/components/DuplicatesView';
 import { ScanView } from '@/components/ScanView';
+import { IssuesView } from '@/components/IssuesView';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Toaster } from '@/components/ui/sonner';
 
-type View = 'overview' | 'bookmarks' | 'scan' | 'duplicates' | 'history';
+type View = 'overview' | 'bookmarks' | 'scan' | 'broken' | 'duplicates' | 'redirected' | 'pending' | 'history';
 
-const NAV_ITEMS = [
-  { view: 'overview', label: '总览', icon: LayoutDashboard },
-  { view: 'bookmarks', label: '全部书签', icon: List },
-  { view: 'scan', label: '健康扫描', icon: Activity },
-  { view: 'duplicates', label: '重复书签', icon: Copy },
-  { view: 'history', label: '操作记录', icon: History },
+const NAV_GROUPS = [
+  { label: '概览', items: [{ view: 'overview', label: '总览', icon: LayoutDashboard }] },
+  { label: '书签', items: [{ view: 'bookmarks', label: '全部书签', icon: List }] },
+  {
+    label: '清理',
+    items: [
+      { view: 'scan', label: '健康扫描', icon: Activity },
+      { view: 'broken', label: '失效链接', icon: Link2Off },
+      { view: 'duplicates', label: '重复书签', icon: Copy },
+      { view: 'redirected', label: '重定向', icon: CornerUpRight },
+      { view: 'pending', label: '待确认', icon: CircleHelp },
+    ],
+  },
+  { label: '系统', items: [{ view: 'history', label: '操作记录', icon: History }] },
 ] as const;
 
 export function App() {
@@ -55,22 +75,27 @@ export function App() {
         </div>
       </header>
 
-      <nav aria-label="主导航" className="flex flex-col gap-1 border-r bg-muted/40 p-3">
-        {NAV_ITEMS.map(({ view: target, label, icon: Icon }) => (
-          <Button
-            key={target}
-            variant={view === target ? 'secondary' : 'ghost'}
-            className="justify-start"
-            onClick={() => setView(target)}
-          >
-            <Icon />
-            {label}
-          </Button>
+      <nav aria-label="主导航" className="flex flex-col gap-4 overflow-auto border-r bg-muted/40 p-3">
+        {NAV_GROUPS.map((group) => (
+          <div key={group.label} className="flex flex-col gap-1">
+            <p className="px-3 text-xs tracking-wider text-muted-foreground">{group.label}</p>
+            {group.items.map(({ view: target, label, icon: Icon }) => (
+              <Button
+                key={target}
+                variant={view === target ? 'secondary' : 'ghost'}
+                className="justify-start"
+                onClick={() => setView(target)}
+              >
+                <Icon />
+                {label}
+              </Button>
+            ))}
+          </div>
         ))}
       </nav>
 
       <main className="min-h-0 overflow-auto">
-        {view === 'overview' && <Overview index={index} />}
+        {view === 'overview' && <Overview index={index} barId={bookmarksBarId(tree)} onNavigate={setView} />}
         {view === 'bookmarks' && (
           <BookmarksView
             roots={tree}
@@ -81,6 +106,9 @@ export function App() {
           />
         )}
         {view === 'scan' && <ScanView bookmarks={index.bookmarks} />}
+        {(view === 'broken' || view === 'redirected' || view === 'pending') && (
+          <IssuesView key={view} kind={view} bookmarks={index.bookmarks} />
+        )}
         {view === 'duplicates' && <DuplicatesView index={index} />}
         {view === 'history' && <HistoryView />}
       </main>

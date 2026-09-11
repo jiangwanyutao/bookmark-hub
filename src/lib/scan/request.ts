@@ -1,5 +1,8 @@
+import type { IDBPDatabase } from 'idb';
 import { browser } from 'wxt/browser';
+import type { HubDB } from '../db';
 import type { Observation } from './classify';
+import { probeNetwork, type ScanDeps } from './scanner';
 
 const REQUEST_TIMEOUT_MS = 10_000;
 const PROBE_TIMEOUT_MS = 5_000;
@@ -112,6 +115,23 @@ export async function checkUrl(url: string): Promise<Observation> {
   }
   return result;
 }
+
+/**
+ * 申请扫描权限并开始观察请求。必须是点击事件里的第一个 await，
+ * 已授权时浏览器直接返回 true，不会再弹框。
+ */
+export async function ensureScanAccess(): Promise<boolean> {
+  const granted = await requestScanPermission();
+  if (granted) startObserving();
+  return granted;
+}
+
+export const browserScanDeps = (db: IDBPDatabase<HubDB>): ScanDeps => ({
+  db,
+  check: checkUrl,
+  probe: () => probeNetwork(isReachable),
+  now: Date.now,
+});
 
 export async function isReachable(url: string): Promise<boolean> {
   try {

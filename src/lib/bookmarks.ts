@@ -41,7 +41,7 @@ export interface DomainCount {
 
 // depth 0 是无标题根节点，depth 1 是浏览器内置目录
 const BUILTIN_FOLDER_DEPTH = 1;
-const PATH_SEPARATOR = ' / ';
+export const PATH_SEPARATOR = ' / ';
 
 export function getDomain(url: string): string {
   try {

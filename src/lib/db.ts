@@ -1,7 +1,7 @@
 import { openDB, type DBSchema } from 'idb';
 import type { Batch, IdMapping, Snapshot } from './history';
 import type { ScanResult } from './scan/classify';
-import type { ScanRun } from './scan/scanner';
+import type { IgnoredUrl, ScanRun } from './scan/scanner';
 
 export interface HubDB extends DBSchema {
   batches: { key: string; value: Batch; indexes: { createdAt: number } };
@@ -10,10 +10,11 @@ export interface HubDB extends DBSchema {
   /** 按网址存：书签撤销恢复后 id 会变，网址不变；重复书签也只需请求一次 */
   scanResults: { key: string; value: ScanResult };
   scanRuns: { key: string; value: ScanRun };
+  ignoredUrls: { key: string; value: IgnoredUrl };
 }
 
 const DB_NAME = 'bookmark-hub';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 export function openHubDB() {
   return openDB<HubDB>(DB_NAME, DB_VERSION, {
@@ -26,6 +27,9 @@ export function openHubDB() {
       if (oldVersion < 2) {
         db.createObjectStore('scanResults', { keyPath: 'url' });
         db.createObjectStore('scanRuns', { keyPath: 'id' });
+      }
+      if (oldVersion < 3) {
+        db.createObjectStore('ignoredUrls', { keyPath: 'url' });
       }
     },
   });
