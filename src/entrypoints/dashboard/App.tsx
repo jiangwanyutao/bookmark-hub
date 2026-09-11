@@ -23,7 +23,7 @@ import { DuplicatesView } from '@/components/DuplicatesView';
 import { ScanView } from '@/components/ScanView';
 import { IssuesView } from '@/components/IssuesView';
 import { SettingsView } from '@/components/SettingsView';
-import { OrganizeView } from '@/components/OrganizeView';
+import { AgentOrganizeView } from '@/components/AgentOrganizeView';
 import { LauncherView } from '@/components/LauncherView';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -148,7 +148,7 @@ export function App() {
           />
         )}
         {view === 'organize' && (
-          <OrganizeView index={index} roots={tree} onOpenSettings={() => setView('settings')} />
+          <AgentOrganizeView index={index} roots={tree} onOpenSettings={() => setView('settings')} />
         )}
         {view === 'scan' && <ScanView bookmarks={index.bookmarks} />}
         {(view === 'broken' || view === 'redirected' || view === 'pending') && (
