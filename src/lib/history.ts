@@ -22,11 +22,15 @@ export interface CreateNode {
   children?: CreateNode[];
 }
 
+/**
+ * create 可带 ref（如 "new:0"），同一批次里后面的 move / create 的 parentId 可以写这个 ref，
+ * 执行时换成新建目录的真实 id。ref 不会与浏览器的数字 id 冲突。
+ */
 export type Intent =
   | { type: 'remove'; id: string }
   | { type: 'move'; id: string; parentId: string; index?: number }
   | { type: 'update'; id: string; title?: string; url?: string }
-  | { type: 'create'; parentId: string; index?: number; node: CreateNode };
+  | { type: 'create'; parentId: string; index?: number; node: CreateNode; ref?: string };
 
 export interface Position {
   parentId: string;
@@ -114,7 +118,7 @@ export async function resolveId(ctx: Ctx, id: string): Promise<string> {
   }
 }
 
-async function perform(ctx: Ctx, intent: Intent): Promise<Op> {
+async function perform(ctx: Ctx, intent: Intent, refs: Map<string, string>): Promise<Op> {
   switch (intent.type) {
     case 'remove': {
       const node = first(await ctx.api.getSubTree(intent.id));
@@ -123,10 +127,11 @@ async function perform(ctx: Ctx, intent: Intent): Promise<Op> {
       return { action: 'REMOVE', node, parentId: node.parentId!, index: node.index ?? 0 };
     }
     case 'move': {
+      const parentId = refs.get(intent.parentId) ?? intent.parentId;
       const before = first(await ctx.api.get(intent.id));
       const after = await ctx.api.move(intent.id, {
-        parentId: intent.parentId,
-        ...(intent.index !== undefined && { index: await clampIndex(ctx, intent.parentId, intent.index) }),
+        parentId,
+        ...(intent.index !== undefined && { index: await clampIndex(ctx, parentId, intent.index) }),
       });
       return { action: 'MOVE', id: intent.id, before: position(before), after: position(after) };
     }
@@ -139,7 +144,9 @@ async function perform(ctx: Ctx, intent: Intent): Promise<Op> {
       return { action: 'UPDATE', id: intent.id, before: fields(before), after: fields(after) };
     }
     case 'create': {
-      const created = await createTree(ctx, intent.node, intent.parentId, intent.index);
+      const parentId = refs.get(intent.parentId) ?? intent.parentId;
+      const created = await createTree(ctx, intent.node, parentId, intent.index);
+      if (intent.ref) refs.set(intent.ref, created.id);
       return { action: 'CREATE', id: created.id, node: first(await ctx.api.getSubTree(created.id)) };
     }
   }
@@ -154,8 +161,10 @@ export async function applyBatch(ctx: Ctx, label: string, intents: Intent[]): Pr
   const ops: Op[] = [];
   const batch: Batch = { id: crypto.randomUUID(), label, createdAt: ctx.now(), ops, snapshotId, undoneAt: null };
 
+  // 本批次 create 的 ref → 新建出来的真实 id
+  const refs = new Map<string, string>();
   try {
-    for (const intent of intents) ops.push(await perform(ctx, intent));
+    for (const intent of intents) ops.push(await perform(ctx, intent, refs));
   } finally {
     if (ops.length > 0) await ctx.db.put('batches', batch);
   }

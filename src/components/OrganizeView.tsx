@@ -6,12 +6,20 @@ import { bookmarksBarId, isUncategorized } from '@/lib/health';
 import { loadAiConfig, requestAiHostPermission, type AiConfig } from '@/lib/ai/config';
 import { chatCompletion } from '@/lib/ai/client';
 import { PRIVACY_LABEL } from '@/lib/ai/prompt';
-import { confidenceLevel, estimateRequests, runOrganize, type ConfidenceLevel, type OrganizeResult } from '@/lib/ai/organize';
+import {
+  confidenceLevel,
+  estimateRequests,
+  runOrganize,
+  type ConfidenceLevel,
+  type NewFolderGroup,
+  type OrganizeResult,
+} from '@/lib/ai/organize';
+import type { Intent } from '@/lib/history';
 import type { Suggestion } from '@/lib/ai/parse';
 import { runBatch } from '@/lib/actions';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -45,6 +53,8 @@ export function OrganizeView({ index, roots, onOpenSettings }: Props) {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [picked, setPicked] = useState<Set<string> | null>(null);
   const [confirming, setConfirming] = useState(false);
+  // 已创建或已忽略的新目录建议（按路径）
+  const [handledFolders, setHandledFolders] = useState<Set<string>>(new Set());
   const controllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -68,6 +78,10 @@ export function OrganizeView({ index, roots, onOpenSettings }: Props) {
   const shown = level === 'all' ? open : open.filter((s) => confidenceLevel(s.confidence) === level);
   const selection = picked ?? new Set(open.filter((s) => confidenceLevel(s.confidence) === 'high').map((s) => s.bookmarkId));
   const selected = shown.filter((s) => selection.has(s.bookmarkId));
+  const newFolderGroups = (result?.newFolders ?? [])
+    .filter((g) => !handledFolders.has(g.path))
+    .map((group) => ({ group, ids: group.bookmarkIds.filter((id) => bookmarkById.has(id)) }))
+    .filter(({ ids }) => ids.length > 0);
 
   const toggle = (id: string, on: boolean) => {
     const next = new Set(selection);
@@ -91,6 +105,7 @@ export function OrganizeView({ index, roots, onOpenSettings }: Props) {
     setPicked(null);
     setDismissed(new Set());
     setFolderOverrides({});
+    setHandledFolders(new Set());
     try {
       const res = await runOrganize(
         (messages) => chatCompletion(config, messages, { signal: controller.signal }),
@@ -99,7 +114,10 @@ export function OrganizeView({ index, roots, onOpenSettings }: Props) {
       );
       setResult(res);
       if (res.failures.length > 0) toast.warning(`${res.failures.length} 批请求失败：${res.failures[0]}`);
-      else if (!controller.signal.aborted) toast.success(`发现 ${res.suggestions.length} 个整理建议`);
+      else if (!controller.signal.aborted) {
+        const extra = res.newFolders.length > 0 ? `、${res.newFolders.length} 个新目录建议` : '';
+        toast.success(`发现 ${res.suggestions.length} 个整理建议${extra}`);
+      }
     } finally {
       setRunning(false);
       controllerRef.current = null;
@@ -113,6 +131,17 @@ export function OrganizeView({ index, roots, onOpenSettings }: Props) {
       `已移动 ${selected.length} 个书签`,
     );
     if (ok) setPicked(null);
+  }
+
+  // 同一批次里先建目录（ref 占位），再把书签移进去；撤销时倒序：先移回，再删掉空目录
+  async function createFolder(group: NewFolderGroup, bookmarkIds: string[]) {
+    const ref = 'new:0';
+    const intents: Intent[] = [
+      { type: 'create', parentId: group.parentId, node: { title: group.name }, ref },
+      ...bookmarkIds.map((id): Intent => ({ type: 'move', id, parentId: ref })),
+    ];
+    const ok = await runBatch('AI 整理：新建目录', intents, `已创建「${group.name}」并移入 ${bookmarkIds.length} 个书签`);
+    if (ok) setHandledFolders((prev) => new Set(prev).add(group.path));
   }
 
   if (config === undefined) return null;
@@ -176,6 +205,41 @@ export function OrganizeView({ index, roots, onOpenSettings }: Props) {
 
       {result && (
         <>
+          {newFolderGroups.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="text-base font-semibold">建议新建目录</h2>
+              {newFolderGroups.map(({ group, ids }) => (
+                <Card key={group.path}>
+                  <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 space-y-1">
+                      <CardTitle className="text-base break-words">{group.path}</CardTitle>
+                      <CardDescription>
+                        {ids.length} 个相关书签{group.reason ? ` · ${group.reason}` : ''}
+                      </CardDescription>
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setHandledFolders((prev) => new Set(prev).add(group.path))}
+                      >
+                        忽略
+                      </Button>
+                      <Button size="sm" onClick={() => void createFolder(group, ids)}>
+                        创建并整理
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="line-clamp-2 text-xs text-muted-foreground">
+                      {ids.map((id) => bookmarkById.get(id)!.title || bookmarkById.get(id)!.url).join('、')}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
           <div className="flex flex-wrap items-center gap-2">
             <Button size="sm" variant={level === 'all' ? 'secondary' : 'ghost'} onClick={() => setLevel('all')}>
               全部 {open.length}

@@ -65,6 +65,38 @@ describe('runOrganize', () => {
     expect(result.suggestions.map((s) => s.bookmarkId)).toEqual(['id1']);
   });
 
+  it('groups new-folder proposals across batches and keeps only folders with at least 5 bookmarks', async () => {
+    // 53 个书签分两批：LLM 在第一批 3 个（b1–b3）、第二批 3 个（b51–b53），合计 6 个 → 保留；
+    // 杂项只有 3 个（b4–b6）→ 丢弃；其余书签不给建议
+    const proposeNewFolders = async (messages: ChatMessage[]) => {
+      const refs = [...messages[1]!.content.matchAll(/"ref":"(b\d+)"/g)].map((m) => m[1]!);
+      const folderFor = (n: number) =>
+        n <= 3 || n >= 51 ? '书签栏 / 开发 / LLM' : n <= 6 ? '其他书签 / 杂项' : null;
+      return JSON.stringify({
+        suggestions: refs
+          .map((ref) => ({ ref, folder: folderFor(Number(ref.slice(1))) }))
+          .filter((s) => s.folder !== null)
+          .map((s) => ({ ...s, confidence: 0.9, reason: '主题相近', isNewFolder: true })),
+      });
+    };
+
+    const result = await runOrganize(proposeNewFolders, {
+      bookmarks: range(53).map((i) => bookmark(i)),
+      folders,
+      privacy: 'title',
+    });
+
+    expect(result.newFolders).toEqual([
+      {
+        path: '书签栏 / 开发 / LLM',
+        parentId: '10',
+        name: 'LLM',
+        reason: '主题相近',
+        bookmarkIds: ['id1', 'id2', 'id3', 'id51', 'id52', 'id53'],
+      },
+    ]);
+  });
+
   it('stops sending new batches once aborted', async () => {
     const controller = new AbortController();
     const complete = vi.fn(async (messages: ChatMessage[]) => {

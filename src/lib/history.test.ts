@@ -160,6 +160,24 @@ describe('create', () => {
     expect(await titlesIn('1')).toEqual([]);
   });
 
+  it('moves bookmarks into a folder created earlier in the same batch, and undo reverts both', async () => {
+    await add('A');
+    await add('B');
+    const [a, b] = await ctx.api.getChildren('2');
+
+    const batch = await applyBatch(ctx, 'AI 整理', [
+      { type: 'create', parentId: '1', node: { title: 'LLM' }, ref: 'new:0' },
+      { type: 'move', id: a!.id, parentId: 'new:0' },
+      { type: 'move', id: b!.id, parentId: 'new:0' },
+    ]);
+    const [folder] = await ctx.api.getChildren('1');
+    expect(await titlesIn(folder!.id)).toEqual(['A', 'B']);
+
+    expect(await undoBatch(ctx, batch.id)).toEqual({ undone: 3, skipped: 0 });
+    expect(await titlesIn('1')).toEqual([]);
+    expect(await titlesIn('2')).toEqual(['A', 'B']);
+  });
+
   it('keeps the recreated folder on undo when the user has added something to it since', async () => {
     const batch = await applyBatch(ctx, '恢复', [{ type: 'create', parentId: '1', node: subtree }]);
     const [folder] = await ctx.api.getChildren('1');

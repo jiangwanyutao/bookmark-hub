@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseSuggestions, type ParseContext } from './parse';
+import { parseNewFolders, parseSuggestions, type ParseContext } from './parse';
 
 const ctx: ParseContext = {
   refs: new Map([
@@ -55,5 +55,46 @@ describe('parseSuggestions', () => {
   it('throws a readable error when the content is not usable JSON', () => {
     expect(() => parseSuggestions('抱歉，我无法完成', ctx)).toThrow('AI 返回的内容不是有效的 JSON');
     expect(() => parseSuggestions('{"items": []}', ctx)).toThrow('AI 返回的内容不是有效的 JSON');
+  });
+
+  it('ignores new-folder proposals, which parseNewFolders handles', () => {
+    expect(
+      parseSuggestions(json([{ ref: 'b1', folder: '书签栏 / 开发 / LLM', confidence: 0.9, reason: '', isNewFolder: true }]), ctx),
+    ).toEqual([]);
+  });
+});
+
+describe('parseNewFolders', () => {
+  it('accepts a new folder under an existing parent', () => {
+    expect(
+      parseNewFolders(json([{ ref: 'b1', folder: '书签栏/开发/LLM', confidence: 0.9, reason: '大模型', isNewFolder: true }]), ctx),
+    ).toEqual([
+      {
+        bookmarkId: '101',
+        parentId: '10',
+        parentPath: '书签栏 / 开发',
+        name: 'LLM',
+        path: '书签栏 / 开发 / LLM',
+        confidence: 0.9,
+        reason: '大模型',
+      },
+    ]);
+  });
+
+  it('drops proposals with a missing parent, an existing folder, no flag, a bad name, or bad data', () => {
+    expect(
+      parseNewFolders(
+        json([
+          { ref: 'b1', folder: '书签栏 / 不存在 / X', confidence: 0.9, isNewFolder: true },
+          { ref: 'b1', folder: '书签栏 / 开发 / AI', confidence: 0.9, isNewFolder: true },
+          { ref: 'b1', folder: '书签栏 / 开发 / LLM', confidence: 0.9 },
+          { ref: 'b1', folder: `书签栏 / 开发 / ${'长'.repeat(31)}`, confidence: 0.9, isNewFolder: true },
+          { ref: 'b1', folder: '书签栏 / 开发 / ', confidence: 0.9, isNewFolder: true },
+          { ref: 'b9', folder: '书签栏 / 开发 / LLM', confidence: 0.9, isNewFolder: true },
+          { ref: 'b1', folder: '书签栏 / 开发 / LLM', confidence: 2, isNewFolder: true },
+        ]),
+        ctx,
+      ),
+    ).toEqual([]);
   });
 });
