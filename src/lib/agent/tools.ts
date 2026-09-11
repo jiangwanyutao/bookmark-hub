@@ -2,6 +2,7 @@ import type { AgentTool, AgentToolResult } from '@earendil-works/pi-agent-core';
 import { Type, type TSchema } from '@earendil-works/pi-ai';
 import { buildIndex, listFolders, type Bookmark, type TreeNode } from '../bookmarks';
 import { toAiItem, type Privacy } from '../ai/prompt';
+import { skipReason } from '../scan/rules';
 import { assignBookmarks, proposeTaxonomy, setScope, summarizePlan, type OrganizePlan } from './plan';
 import type { RefTable } from './refs';
 
@@ -41,9 +42,14 @@ function snapshot(ctx: ToolContext) {
 
 const underFolder = (bookmarks: Bookmark[], folderId: string) => bookmarks.filter((b) => b.ancestorIds.includes(folderId));
 
+// 内网书签不算在整理范围内：list_bookmarks 从不把它们的编号发给模型，assign 也不该收。
 function inScopeOf(plan: OrganizePlan, bookmarks: Bookmark[]) {
   const scopeFolders = plan.scope?.folderIds ?? [];
-  const ids = new Set(bookmarks.filter((b) => b.ancestorIds.some((a) => scopeFolders.includes(a))).map((b) => b.id));
+  const ids = new Set(
+    bookmarks
+      .filter((b) => b.ancestorIds.some((a) => scopeFolders.includes(a)) && skipReason(b.url) !== 'intranet')
+      .map((b) => b.id),
+  );
   return (id: string) => ids.has(id);
 }
 

@@ -125,6 +125,14 @@ describe('scope, taxonomy and assign', () => {
     await expect(run('assign', { refs: ['b99'], category: '教程' })).rejects.toThrow('编号不存在：b99');
     await expect(run('assign', { refs: ['b5'], category: '教程' })).rejects.toThrow('不在整理范围内');
   });
+
+  it('rejects an intranet bookmark even though it sits inside the scope folder', async () => {
+    // b4 = Jira（内网），就在范围目录 20 下面；list_bookmarks 从不会把它的编号发给模型，
+    // 但如果模型（或坏数据）猜出了这个编号，assign 也不该把它当作范围内的书签接受。
+    await run('set_scope', { folderIds: ['20'], rootFolderId: '1' });
+    await run('propose_taxonomy', { categories: ['教程'] });
+    await expect(run('assign', { refs: ['b4'], category: '教程' })).rejects.toThrow('不在整理范围内');
+  });
 });
 
 describe('ask_user and finish', () => {

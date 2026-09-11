@@ -2,6 +2,7 @@ import type { AgentMessage, StreamFn } from '@earendil-works/pi-agent-core';
 import type { Model } from '@earendil-works/pi-ai';
 import { buildIndex, type TreeNode } from '../bookmarks';
 import type { AiConfig } from '../ai/config';
+import { skipReason } from '../scan/rules';
 import { emptyPlan, type OrganizePlan } from './plan';
 import { createRefTable } from './refs';
 import { createOrganizeSession, type OrganizeSession } from './session';
@@ -78,16 +79,26 @@ export function createOrganizeStore(deps: OrganizeStoreDeps): OrganizeStore {
     return { status: 'idle' };
   }
 
-  async function run(step: () => Promise<void>) {
+  async function run(current: OrganizeSession, step: () => Promise<void>) {
     pause = null;
     set({ status: 'running', question: null });
     try {
       await step();
+      // pi-agent-core 的 shouldStopAfterTurn 在 ask_user/finish/上限时会在排空 steering
+      // 队列前结束这一轮：用户这时发的消息只是排进队列，模型看不到，还会在下一次
+      // prompt 时才过期地冒出来。这里手动把排队的消息继续喂给模型，直到队列排空。
+      while (session === current && !lastFailed() && current.agent.hasQueuedMessages()) {
+        pause = null;
+        await current.agent.continue();
+      }
     } catch (e) {
       // 例如智能体仍在运行时又被调用；不让它变成未处理的 Promise 拒绝
+      if (session !== current) return;
       const text = e instanceof Error ? e.message : String(e);
       return set({ status: 'error', transcript: [...state.transcript, { kind: 'error', id: `error-${state.transcript.length}`, text }] });
     }
+    // 旧会话在 reset() / 重新 start() 之后才落定：不能覆盖新会话的状态
+    if (session !== current) return;
     if (lastFailed()) return set({ status: 'error' });
     set(statusFromPause(pause));
   }
@@ -112,7 +123,12 @@ export function createOrganizeStore(deps: OrganizeStoreDeps): OrganizeStore {
     async start(config) {
       reset();
       const { model, streamFn } = deps.createModel(config);
-      const refs = createRefTable(buildIndex(deps.getRoots()).bookmarks.map((b) => b.id));
+      // 只给会发给 AI 的书签编号：内网书签不发送，编了号模型也可能瞎猜中真实 id
+      const refs = createRefTable(
+        buildIndex(deps.getRoots())
+          .bookmarks.filter((b) => skipReason(b.url) !== 'intranet')
+          .map((b) => b.id),
+      );
       session = createOrganizeSession({
         model,
         streamFn,
@@ -140,7 +156,7 @@ export function createOrganizeStore(deps: OrganizeStoreDeps): OrganizeStore {
         set({ transcript: applyAgentEvent(state.transcript, event), tokens: state.tokens + used });
       });
       const current = session;
-      await run(() => current.agent.prompt(START_PROMPT));
+      await run(current, () => current.agent.prompt(START_PROMPT));
     },
     async send(text) {
       const message = text.trim();
@@ -151,22 +167,24 @@ export function createOrganizeStore(deps: OrganizeStoreDeps): OrganizeStore {
         return;
       }
       const current = session;
-      await run(() => current.agent.prompt(message));
+      if (state.status === 'limit') current.grantMoreCalls();
+      await run(current, () => current.agent.prompt(message));
     },
     stop() {
       session?.agent.abort();
+      session?.agent.clearAllQueues();
     },
     async retry() {
       if (!session) return;
       const current = session;
       if (lastFailed()) current.agent.state.messages = current.agent.state.messages.slice(0, -1);
-      await run(() => current.agent.continue());
+      await run(current, () => current.agent.continue());
     },
     async continueAfterLimit() {
       if (!session) return;
       session.grantMoreCalls();
       const current = session;
-      await run(() => current.agent.prompt('继续'));
+      await run(current, () => current.agent.prompt('继续'));
     },
     reset,
   };
