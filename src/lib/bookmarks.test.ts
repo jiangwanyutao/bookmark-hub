@@ -111,6 +111,13 @@ describe('searchBookmarks', () => {
   it('matches folder path as well as title and url', () => {
     expect(ids(searchBookmarks(bookmarks, '开发 ai'))).toEqual(['1000', '1001']);
   });
+
+  it('matches tags when a tag map is given', () => {
+    const tags = new Map([['https://react.dev/learn/perf', ['LLM', '教程']]]);
+    expect(ids(searchBookmarks(bookmarks, 'llm', tags))).toEqual(['101']);
+    expect(ids(searchBookmarks(bookmarks, 'react 教程', tags))).toEqual(['101']);
+    expect(ids(searchBookmarks(bookmarks, 'llm'))).toEqual([]);
+  });
 });
 
 describe('listFolders', () => {

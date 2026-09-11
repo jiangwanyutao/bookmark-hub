@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { listFolders, searchBookmarks, type BookmarkIndex, type TreeNode } from '@/lib/bookmarks';
+import { useTags } from '@/hooks/useTags';
 import { FolderTree } from './FolderTree';
 import { BookmarkList } from './BookmarkList';
 import { BookmarkDetail } from './BookmarkDetail';
@@ -14,11 +15,12 @@ interface Props {
 
 export function BookmarksView({ roots, index, query, folderId, onSelectFolder }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const { tags, save: saveTags } = useTags();
 
   const inFolder = folderId
     ? index.bookmarks.filter((b) => b.ancestorIds.includes(folderId))
     : index.bookmarks;
-  const visible = searchBookmarks(inFolder, query);
+  const visible = searchBookmarks(inFolder, query, tags);
   // 书签在浏览器里被删掉后，这里自然变成 undefined
   const selected = index.bookmarks.find((b) => b.id === selectedId);
 
@@ -36,7 +38,14 @@ export function BookmarksView({ roots, index, query, folderId, onSelectFolder }:
         </p>
         <BookmarkList bookmarks={visible} selectedId={selectedId} onSelect={setSelectedId} />
       </section>
-      <BookmarkDetail bookmark={selected} folders={listFolders(roots)} />
+      <BookmarkDetail
+        bookmark={selected}
+        folders={listFolders(roots)}
+        tags={selected ? (tags.get(selected.url) ?? []) : []}
+        onSaveTags={async (next) => {
+          if (selected) await saveTags([[selected.url, next]]);
+        }}
+      />
     </div>
   );
 }

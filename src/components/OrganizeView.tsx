@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Sparkles, X } from 'lucide-react';
+import { Sparkles, Tags, X } from 'lucide-react';
 import { listFolders, type BookmarkIndex, type TreeNode } from '@/lib/bookmarks';
 import { bookmarksBarId, isUncategorized } from '@/lib/health';
 import { loadAiConfig, requestAiHostPermission, type AiConfig } from '@/lib/ai/config';
 import { chatCompletion } from '@/lib/ai/client';
+import { runTagging } from '@/lib/ai/tags';
+import { useTags } from '@/hooks/useTags';
 import { PRIVACY_LABEL } from '@/lib/ai/prompt';
 import {
   confidenceLevel,
@@ -55,6 +57,9 @@ export function OrganizeView({ index, roots, onOpenSettings }: Props) {
   const [confirming, setConfirming] = useState(false);
   // 已创建或已忽略的新目录建议（按路径）
   const [handledFolders, setHandledFolders] = useState<Set<string>>(new Set());
+  const [tagging, setTagging] = useState(false);
+  const [tagProgress, setTagProgress] = useState<[number, number] | null>(null);
+  const { tags, save: saveTags } = useTags();
   const controllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -68,6 +73,7 @@ export function OrganizeView({ index, roots, onOpenSettings }: Props) {
     const barId = bookmarksBarId(roots);
     return index.bookmarks.filter((b) => isUncategorized(b, barId));
   }, [index, roots]);
+  const untagged = useMemo(() => index.bookmarks.filter((b) => !tags.has(b.url)), [index, tags]);
 
   const folderOf = (s: Suggestion) => folderOverrides[s.bookmarkId] ?? s.folderId;
   // 书签已被删除，或已经在建议的目录里（比如刚移动过）的，不再显示
@@ -144,6 +150,39 @@ export function OrganizeView({ index, roots, onOpenSettings }: Props) {
     if (ok) setHandledFolders((prev) => new Set(prev).add(group.path));
   }
 
+  async function generateTags() {
+    if (!config) return;
+    // 授权须是点击后的第一个 await
+    const access = await requestAiHostPermission(config.baseUrl);
+    if (access !== 'granted') {
+      if (access === 'denied') toast.error('没有获得访问 AI 服务地址的权限');
+      return;
+    }
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    setTagging(true);
+    setTagProgress(null);
+    try {
+      const res = await runTagging(
+        (messages) => chatCompletion(config, messages, { signal: controller.signal }),
+        { bookmarks: untagged, privacy: config.privacy },
+        { signal: controller.signal, onProgress: (done, total) => setTagProgress([done, total]) },
+      );
+      const entries = [...res.tags].flatMap(([id, bookmarkTags]): [string, string[]][] => {
+        const b = bookmarkById.get(id);
+        return b ? [[b.url, bookmarkTags]] : [];
+      });
+      await saveTags(entries);
+      if (res.failures.length > 0) toast.warning(`${res.failures.length} 批请求失败：${res.failures[0]}`);
+      else if (!controller.signal.aborted) toast.success(`已为 ${entries.length} 个书签生成标签`);
+    } catch (e) {
+      toast.error(`生成标签失败：${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setTagging(false);
+      controllerRef.current = null;
+    }
+  }
+
   if (config === undefined) return null;
 
   if (!config) {
@@ -181,7 +220,7 @@ export function OrganizeView({ index, roots, onOpenSettings }: Props) {
               停止
             </Button>
           ) : (
-            <Button disabled={targets.length === 0} onClick={() => void start()}>
+            <Button disabled={targets.length === 0 || tagging} onClick={() => void start()}>
               <Sparkles />
               {result ? '重新整理' : '开始整理'}
             </Button>
@@ -200,6 +239,40 @@ export function OrganizeView({ index, roots, onOpenSettings }: Props) {
             </div>
           )}
           {result && result.skipped > 0 && <p>{result.skipped} 个内网书签没有发送给 AI。</p>}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
+          <div className="space-y-1">
+            <CardTitle className="text-base">AI 标签</CardTitle>
+            <CardDescription>给书签打上主题标签，搜索时能按标签找到。标签只存在本机，不改动浏览器书签。</CardDescription>
+          </div>
+          {tagging ? (
+            <Button variant="outline" onClick={() => controllerRef.current?.abort()}>
+              停止
+            </Button>
+          ) : (
+            <Button variant="outline" disabled={untagged.length === 0 || running} onClick={() => void generateTags()}>
+              <Tags />
+              生成标签
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm text-muted-foreground">
+          <p>
+            {untagged.length > 0
+              ? `${untagged.length} 个书签还没有标签，约 ${estimateRequests(untagged.length)} 次请求。`
+              : '所有书签都有标签了。'}
+          </p>
+          {tagging && tagProgress && (
+            <div className="space-y-2">
+              <Progress value={(tagProgress[0] / tagProgress[1]) * 100} aria-label="标签生成进度" />
+              <p className="tabular-nums">
+                第 {tagProgress[0]} / {tagProgress[1]} 批
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

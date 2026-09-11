@@ -114,9 +114,13 @@ export function topDomains(bookmarks: Bookmark[], limit: number): DomainCount[] 
     .slice(0, limit);
 }
 
-/** 按空格拆词，每个词都要命中标题、网址或目录路径之一（不区分大小写）。 */
-export function searchBookmarks(bookmarks: Bookmark[], query: string): Bookmark[] {
+/** 按空格拆词，每个词都要命中标题、网址、目录路径或标签之一（不区分大小写）。 */
+export function searchBookmarks(bookmarks: Bookmark[], query: string, tags?: Map<string, string[]>): Bookmark[] {
   const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
   if (terms.length === 0) return bookmarks;
-  return bookmarks.filter((b) => terms.every((t) => b.searchText.includes(t)));
+  return bookmarks.filter((b) => {
+    const bookmarkTags = tags?.get(b.url);
+    const text = bookmarkTags ? `${b.searchText}\n${bookmarkTags.join('\n').toLowerCase()}` : b.searchText;
+    return terms.every((t) => text.includes(t));
+  });
 }

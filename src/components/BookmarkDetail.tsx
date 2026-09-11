@@ -1,13 +1,16 @@
 import type { Bookmark, FolderOption } from '@/lib/bookmarks';
 import { Separator } from '@/components/ui/separator';
 import { BookmarkActions } from './BookmarkActions';
+import { TagEditor } from './TagEditor';
 
 interface Props {
   bookmark: Bookmark | undefined;
   folders: FolderOption[];
+  tags: string[];
+  onSaveTags: (tags: string[]) => Promise<void>;
 }
 
-export function BookmarkDetail({ bookmark, folders }: Props) {
+export function BookmarkDetail({ bookmark, folders, tags, onSaveTags }: Props) {
   if (!bookmark) {
     return (
       <aside className="flex items-center justify-center border-l p-5 text-sm text-muted-foreground">
@@ -38,6 +41,9 @@ export function BookmarkDetail({ bookmark, folders }: Props) {
           </div>
         ))}
       </dl>
+      <div className="mt-3">
+        <TagEditor key={bookmark.id} tags={tags} onSave={onSaveTags} />
+      </div>
       <BookmarkActions key={bookmark.id} bookmark={bookmark} folders={folders} />
     </aside>
   );

@@ -26,7 +26,7 @@ export interface ParseContext {
   folders: Map<string, string>;
 }
 
-const INVALID_JSON = 'AI 返回的内容不是有效的 JSON';
+export const INVALID_JSON = 'AI 返回的内容不是有效的 JSON';
 const MAX_FOLDER_NAME_LENGTH = 30;
 
 // 模型可能写成「书签栏/开发」，按去掉斜杠两侧空格后比较
@@ -37,7 +37,7 @@ const normalizePath = (path: string) =>
     .join(PATH_SEPARATOR);
 
 // 容忍 ```json 代码块和前后说明文字：取第一个 { 到最后一个 }
-function extractJson(content: string): unknown {
+export function extractJson(content: string): unknown {
   const start = content.indexOf('{');
   const end = content.lastIndexOf('}');
   if (start === -1 || end <= start) throw new Error(INVALID_JSON);
