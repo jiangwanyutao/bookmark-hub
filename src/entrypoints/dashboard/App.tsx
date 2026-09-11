@@ -1,20 +1,22 @@
 import { useMemo, useState } from 'react';
-import { Copy, History, LayoutDashboard, List, Search } from 'lucide-react';
+import { Activity, Copy, History, LayoutDashboard, List, Search } from 'lucide-react';
 import { useBookmarkTree } from '@/hooks/useBookmarkTree';
 import { buildIndex } from '@/lib/bookmarks';
 import { Overview } from '@/components/Overview';
 import { BookmarksView } from '@/components/BookmarksView';
 import { HistoryView } from '@/components/HistoryView';
 import { DuplicatesView } from '@/components/DuplicatesView';
+import { ScanView } from '@/components/ScanView';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Toaster } from '@/components/ui/sonner';
 
-type View = 'overview' | 'bookmarks' | 'duplicates' | 'history';
+type View = 'overview' | 'bookmarks' | 'scan' | 'duplicates' | 'history';
 
 const NAV_ITEMS = [
   { view: 'overview', label: '总览', icon: LayoutDashboard },
   { view: 'bookmarks', label: '全部书签', icon: List },
+  { view: 'scan', label: '健康扫描', icon: Activity },
   { view: 'duplicates', label: '重复书签', icon: Copy },
   { view: 'history', label: '操作记录', icon: History },
 ] as const;
@@ -78,6 +80,7 @@ export function App() {
             onSelectFolder={setFolderId}
           />
         )}
+        {view === 'scan' && <ScanView bookmarks={index.bookmarks} />}
         {view === 'duplicates' && <DuplicatesView index={index} />}
         {view === 'history' && <HistoryView />}
       </main>
