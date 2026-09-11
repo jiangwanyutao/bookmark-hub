@@ -19,14 +19,14 @@ function Row({ item }: { item: TranscriptItem }) {
     case 'user':
       return (
         <li className="flex justify-end">
-          <span className="max-w-[80%] rounded-2xl bg-primary px-3 py-2 text-sm whitespace-pre-wrap text-primary-foreground">{item.text}</span>
+          <span className="max-w-[80%] rounded-2xl bg-primary px-3 py-2 text-base whitespace-pre-wrap text-primary-foreground">{item.text}</span>
         </li>
       );
     case 'assistant':
       return (
         <li className="flex gap-2">
           <Bot className="mt-1 size-4 shrink-0 text-primary" />
-          <span className="max-w-[85%] text-sm whitespace-pre-wrap">
+          <span className="max-w-[85%] text-base whitespace-pre-wrap">
             {item.text}
             {item.streaming && <span className="motion-safe:animate-pulse">▍</span>}
           </span>
@@ -96,12 +96,12 @@ export function ChatPanel({ state, onStart, onSend, onStop, onRetry, onContinue 
         ))}
       </ol>
       {state.status === 'waiting' && state.question && (
-        <div className="space-y-2 border-t bg-accent/40 p-4">
+        <div role="status" className="space-y-2 border-t bg-accent/40 p-4">
           <p className="text-sm font-medium">{state.question.text}</p>
           {state.question.options.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {state.question.options.map((option) => (
-                <Button key={option} size="sm" variant="outline" onClick={() => onSend(option)}>
+                <Button key={option} variant="outline" onClick={() => onSend(option)}>
                   {option}
                 </Button>
               ))}
@@ -111,7 +111,10 @@ export function ChatPanel({ state, onStart, onSend, onStop, onRetry, onContinue 
       )}
       {state.status === 'error' && (
         <div className="flex items-center justify-between gap-2 border-t p-3 text-sm text-destructive">
-          <span>模型调用失败，可以从中断的地方重试。如果提示不支持工具调用（tools），请在设置里换成 deepseek-chat、qwen-plus 等支持工具调用的模型。</span>
+          <span>
+            模型调用失败。可以从中断的地方重试；如果是 401 或模型不存在，请检查设置里的 Base URL、API Key 和模型名；如果提示不支持工具调用（tools），请换成
+            deepseek-chat、qwen-plus 等支持工具调用的模型。
+          </span>
           <Button size="sm" variant="outline" onClick={onRetry}>
             <RotateCcw />
             重试

@@ -157,13 +157,13 @@ export function LauncherView({ roots, index }: Props) {
                   const isActive = activeTab === value;
                   return (
                     <button
-                      key={label}
+                      key={value ?? '__all'}
                       type="button"
                       role="tab"
                       aria-selected={isActive}
                       onClick={() => setTab(value)}
                       className={cn(
-                        'rounded-xl px-4 py-2 text-sm outline-none hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring',
+                        'rounded-xl px-4 py-2.5 text-base outline-none hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring',
                         isActive && 'bg-accent font-medium text-accent-foreground',
                       )}
                     >

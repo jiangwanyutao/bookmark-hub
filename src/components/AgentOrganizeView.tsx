@@ -48,7 +48,7 @@ export function AgentOrganizeView({ index, roots, onOpenSettings }: Props) {
     // 授权须是点击后的第一个 await
     const access = await requestAiHostPermission(config.baseUrl);
     if (access !== 'granted') {
-      if (access === 'denied') toast.error('没有获得访问 AI 服务地址的权限');
+      if (access === 'denied') toast.error('没有获得访问 AI 服务地址的权限，请在弹出的授权框中点允许后再试');
       return;
     }
     await store.start(config);
