@@ -126,4 +126,14 @@ describe('createOrganizeSession', () => {
     await session.agent.prompt('继续');
     expect(faux.state.callCount).toBe(4);
   });
+
+  it('does not treat a turn with no tool calls as hitting the limit', async () => {
+    const onLimit = vi.fn();
+    const { faux, session } = start(1, onLimit);
+    faux.setResponses([fauxAssistantMessage('好了')]);
+
+    await session.agent.prompt('开始整理');
+    expect(onLimit).not.toHaveBeenCalled();
+    expect(faux.state.callCount).toBe(1);
+  });
 });

@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { Agent } from '@earendil-works/pi-agent-core';
 import { createModels, fauxAssistantMessage, fauxProvider, fauxToolCall } from '@earendil-works/pi-ai';
 import type { TreeNode } from '../bookmarks';
 import { createOrganizeStore } from './store';
@@ -33,6 +34,10 @@ function setup(maxModelCalls?: number) {
 }
 
 describe('createOrganizeStore', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('waits for the user after the agent asks a question', async () => {
     const { faux, store } = setup();
     faux.setResponses([call('ask_user', { question: '整理哪些目录？', options: ['其他书签'] }, 't1')]);
@@ -98,5 +103,29 @@ describe('createOrganizeStore', () => {
     await store.start(config);
     store.reset();
     expect(store.getState()).toMatchObject({ status: 'idle', transcript: [], question: null, summary: null, tokens: 0 });
+  });
+
+  it('unsubscribes the previous session agent listener before starting a new one', async () => {
+    // 端到端地让旧会话“迟到”触发监听器很难摆脱真实计时（abort 后流式返回的是空占位消息，
+    // 对 transcript/tokens 是天然无副作用的净空操作，测不出区别）；这里直接验证 store.ts
+    // 拿到的 unsubscribe 函数确实在 reset() 时被调用——即改动本身生效。
+    const originalSubscribe = Agent.prototype.subscribe;
+    const unsubscribeSpy = vi.fn();
+    vi.spyOn(Agent.prototype, 'subscribe').mockImplementation(function (this: Agent, listener) {
+      const unsubscribe = originalSubscribe.call(this, listener);
+      return () => {
+        unsubscribeSpy();
+        unsubscribe();
+      };
+    });
+
+    const { faux, store } = setup();
+    faux.setResponses([fauxAssistantMessage('第一次')]);
+    await store.start(config);
+    expect(unsubscribeSpy).not.toHaveBeenCalled();
+
+    faux.setResponses([fauxAssistantMessage('第二次')]);
+    await store.start(config); // 内部 reset() 应在 abort 旧会话前退订它的监听器
+    expect(unsubscribeSpy).toHaveBeenCalledTimes(1);
   });
 });

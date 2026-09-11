@@ -55,6 +55,7 @@ export function createOrganizeStore(deps: OrganizeStoreDeps): OrganizeStore {
   let state = initialState();
   let session: OrganizeSession | null = null;
   let pause: Pause = null;
+  let unsubscribeSession: (() => void) | null = null;
   const listeners = new Set<() => void>();
 
   const set = (patch: Partial<OrganizeState>) => {
@@ -67,25 +68,13 @@ export function createOrganizeStore(deps: OrganizeStoreDeps): OrganizeStore {
     return last?.role === 'assistant' && last.stopReason === 'error';
   };
 
-  // session.ts 的 shouldStopAfterTurn 在每轮结束都检查调用上限，哪怕模型这轮已经
-  // 自然结束（没有工具调用）也会触发 onLimit；这里只在模型确实还想继续（toolUse）
-  // 时才展示「已达上限」，避免刚放行一次调用又立刻误报限制。
-  const modelWantsToContinue = () => {
-    const messages = session?.agent.state.messages ?? [];
-    for (let i = messages.length - 1; i >= 0; i -= 1) {
-      const message = messages[i];
-      if (message?.role === 'assistant') return message.stopReason === 'toolUse';
-    }
-    return false;
-  };
-
   // 拆成接收 Pause 参数的函数：直接在 run() 里连续判断 pause?.kind 时，TS 会把
   // 闭包里可变的 pause 错误地窄化成 null（编译期 tsc --noEmit 报 kind 在 never 上不存在），
   // 传参重新获得声明类型 Pause 可以绕开这个类型收窄问题，运行时行为不变。
   function statusFromPause(p: Pause): Partial<OrganizeState> {
     if (p?.kind === 'ask') return { status: 'waiting', question: { text: p.text, options: p.options } };
     if (p?.kind === 'finish') return { status: 'finished', summary: p.summary };
-    if (p?.kind === 'limit') return { status: modelWantsToContinue() ? 'limit' : 'idle' };
+    if (p?.kind === 'limit') return { status: 'limit' };
     return { status: 'idle' };
   }
 
@@ -104,6 +93,9 @@ export function createOrganizeStore(deps: OrganizeStoreDeps): OrganizeStore {
   }
 
   function reset() {
+    // 先退订旧会话的事件监听，避免它未处理完的（abort 是协作式的）事件流写进新状态
+    unsubscribeSession?.();
+    unsubscribeSession = null;
     session?.agent.abort();
     session = null;
     pause = null;
@@ -143,7 +135,7 @@ export function createOrganizeStore(deps: OrganizeStoreDeps): OrganizeStore {
           },
         },
       });
-      session.agent.subscribe((event) => {
+      unsubscribeSession = session.agent.subscribe((event) => {
         const used = event.type === 'message_end' && event.message.role === 'assistant' ? event.message.usage.totalTokens : 0;
         set({ transcript: applyAgentEvent(state.transcript, event), tokens: state.tokens + used });
       });

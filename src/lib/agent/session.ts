@@ -33,7 +33,8 @@ export function createOrganizeSession(options: {
     // ask_user / finish 之后停下等用户；同轮混调其他工具时仅靠 terminate 不会停，这里兜底
     shouldStopAfterTurn: ({ toolResults }) => {
       if (toolResults.some((r) => PAUSING_TOOLS.has(r.toolName))) return true;
-      if (calls >= maxModelCalls) {
+      // 没有工具调用的这一轮反正会自己结束，不算「被上限打断」
+      if (toolResults.length > 0 && calls >= maxModelCalls) {
         onLimit?.();
         return true;
       }
