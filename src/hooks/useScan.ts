@@ -30,8 +30,9 @@ export function useScan(bookmarks: Bookmark[]) {
   }, []);
 
   async function start() {
-    if (!(await ensureScanAccess())) {
-      toast.error('没有获得访问网站的权限，无法扫描。其他功能不受影响。');
+    const access = await ensureScanAccess();
+    if (access !== 'granted') {
+      if (access === 'denied') toast.error('没有获得访问网站的权限，无法扫描。其他功能不受影响。');
       return;
     }
     setPermitted(true);

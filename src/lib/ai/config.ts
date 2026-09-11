@@ -1,4 +1,5 @@
 import { browser } from 'wxt/browser';
+import { requestPermissions } from '../permissions';
 import type { Privacy } from './prompt';
 
 /** OpenAI 兼容接口配置，只存本机 storage.local，不随 Chrome 同步。 */
@@ -48,4 +49,4 @@ export function normalizeBaseUrl(input: string): string | null {
 
 /** 必须是点击事件里的第一个 await；已授权时直接返回 true。 */
 export const requestAiHostPermission = (baseUrl: string) =>
-  browser.permissions.request({ origins: [`${new URL(baseUrl).origin}/*`] });
+  requestPermissions({ origins: [`${new URL(baseUrl).origin}/*`] });

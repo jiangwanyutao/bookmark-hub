@@ -1,6 +1,7 @@
 import type { IDBPDatabase } from 'idb';
 import { browser } from 'wxt/browser';
 import type { HubDB } from '../db';
+import { requestPermissions, type PermissionResult } from '../permissions';
 import type { Observation } from './classify';
 import { probeNetwork, type ScanDeps } from './scanner';
 
@@ -28,7 +29,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export const hasScanPermission = () => browser.permissions.contains(SCAN_PERMISSIONS);
 
 /** 必须在点击事件里第一时间调用，浏览器只在用户手势内弹出授权框。 */
-export const requestScanPermission = () => browser.permissions.request(SCAN_PERMISSIONS);
+export const requestScanPermission = () => requestPermissions(SCAN_PERMISSIONS);
 
 /**
  * 通过 webRequest 拿到 fetch 拿不到的信息：跳转链每一跳的状态码、网络错误码。
@@ -120,10 +121,10 @@ export async function checkUrl(url: string): Promise<Observation> {
  * 申请扫描权限并开始观察请求。必须是点击事件里的第一个 await，
  * 已授权时浏览器直接返回 true，不会再弹框。
  */
-export async function ensureScanAccess(): Promise<boolean> {
-  const granted = await requestScanPermission();
-  if (granted) startObserving();
-  return granted;
+export async function ensureScanAccess(): Promise<PermissionResult> {
+  const result = await requestScanPermission();
+  if (result === 'granted') startObserving();
+  return result;
 }
 
 export const browserScanDeps = (db: IDBPDatabase<HubDB>): ScanDeps => ({

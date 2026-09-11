@@ -97,8 +97,9 @@ export function IssuesView({ kind, bookmarks }: { kind: IssueKind; bookmarks: Bo
 
   async function recheck(issues: BookmarkIssue[]) {
     // 授权须在点击后第一时间请求
-    if (!(await ensureScanAccess())) {
-      toast.error('没有获得访问网站的权限，无法检测。');
+    const access = await ensureScanAccess();
+    if (access !== 'granted') {
+      if (access === 'denied') toast.error('没有获得访问网站的权限，无法检测。');
       return;
     }
     await withBusy(async () => {

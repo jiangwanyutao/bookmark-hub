@@ -38,7 +38,11 @@ export function AiSettingsCard() {
     setError(null);
 
     // 授权须是点击后的第一个 await
-    if (!(await requestAiHostPermission(baseUrl))) return setError('没有获得访问这个地址的权限，无法调用 AI');
+    const access = await requestAiHostPermission(baseUrl);
+    if (access !== 'granted') {
+      if (access === 'denied') setError('没有获得访问这个地址的权限，无法调用 AI');
+      return;
+    }
 
     const config: AiConfig = { baseUrl, apiKey, model, privacy };
     setTesting(true);

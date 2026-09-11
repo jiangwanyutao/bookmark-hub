@@ -79,8 +79,9 @@ export function OrganizeView({ index, roots, onOpenSettings }: Props) {
   async function start() {
     if (!config) return;
     // 授权须是点击后的第一个 await
-    if (!(await requestAiHostPermission(config.baseUrl))) {
-      toast.error('没有获得访问 AI 服务地址的权限');
+    const access = await requestAiHostPermission(config.baseUrl);
+    if (access !== 'granted') {
+      if (access === 'denied') toast.error('没有获得访问 AI 服务地址的权限');
       return;
     }
     const controller = new AbortController();
