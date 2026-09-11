@@ -40,6 +40,20 @@ describe('classify', () => {
   });
 });
 
+describe('classify on a host the user marked as needing VPN', () => {
+  it('treats network failures as maybe_vpn even on a normal network', () => {
+    expect(classify(obs({ netError: 'net::ERR_NAME_NOT_RESOLVED' }), 'normal', { vpnHost: true })).toEqual({
+      health: 'unknown',
+      failReason: 'maybe_vpn',
+      redirectTo: null,
+    });
+  });
+
+  it('still trusts real http responses', () => {
+    expect(classify(obs({ status: 404 }), 'normal', { vpnHost: true }).health).toBe('broken');
+  });
+});
+
 const result = (url: string, health: ScanResult['health'], failReason: ScanResult['failReason']): ScanResult => ({
   url,
   health,

@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { EyeOff, ExternalLink, RefreshCw, Trash2, Wand2 } from 'lucide-react';
+import { EyeOff, ExternalLink, Globe, RefreshCw, Trash2, Wand2 } from 'lucide-react';
 import type { Bookmark } from '@/lib/bookmarks';
-import type { FailReason } from '@/lib/scan/classify';
+import { hostOf, type FailReason } from '@/lib/scan/classify';
 import { collectIssues, FAIL_REASON_LABEL, type Issue, type IssueKind } from '@/lib/scan/issues';
-import { recheckUrls, setIgnored } from '@/lib/scan/scanner';
+import { addVpnHosts, recheckUrls, setIgnored } from '@/lib/scan/scanner';
 import { browserScanDeps, ensureScanAccess } from '@/lib/scan/request';
 import { getHubCtx } from '@/lib/hubContext';
 import { runBatch } from '@/lib/actions';
@@ -116,6 +116,16 @@ export function IssuesView({ kind, bookmarks }: { kind: IssueKind; bookmarks: Bo
       toast.success(on ? `已忽略 ${issues.length} 条` : `已取消忽略 ${issues.length} 条`);
     });
 
+  const markVpn = (issues: BookmarkIssue[]) =>
+    withBusy(async () => {
+      const { db } = await getHubCtx();
+      const hosts = [...new Set(issues.map((i) => hostOf(i.bookmark.url)))];
+      const moved = await addVpnHosts(db, hosts, Date.now());
+      toast.success(
+        `已将 ${hosts.length} 个网站标记为需要 VPN${moved > 0 ? `，${moved} 条结果已移到「待确认」` : ''}`,
+      );
+    });
+
   const remove = (issues: BookmarkIssue[]) =>
     withBusy(async () => {
       await runBatch(
@@ -204,6 +214,17 @@ export function IssuesView({ kind, bookmarks }: { kind: IssueKind; bookmarks: Bo
               <EyeOff />
               忽略
             </Button>
+            {kind !== 'redirected' && (
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={busy || selected.length === 0}
+                onClick={() => void markVpn(selected)}
+              >
+                <Globe />
+                需要 VPN
+              </Button>
+            )}
             {kind === 'redirected' ? (
               <Button size="sm" disabled={busy || selected.length === 0} onClick={() => void updateUrls(selected)}>
                 <Wand2 />

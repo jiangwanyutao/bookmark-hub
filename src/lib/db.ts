@@ -1,7 +1,7 @@
 import { openDB, type DBSchema } from 'idb';
 import type { Batch, IdMapping, Snapshot } from './history';
 import type { ScanResult } from './scan/classify';
-import type { IgnoredUrl, ScanRun } from './scan/scanner';
+import type { IgnoredUrl, ScanRun, VpnHost } from './scan/scanner';
 
 export interface HubDB extends DBSchema {
   batches: { key: string; value: Batch; indexes: { createdAt: number } };
@@ -11,10 +11,11 @@ export interface HubDB extends DBSchema {
   scanResults: { key: string; value: ScanResult };
   scanRuns: { key: string; value: ScanRun };
   ignoredUrls: { key: string; value: IgnoredUrl };
+  vpnHosts: { key: string; value: VpnHost };
 }
 
 const DB_NAME = 'bookmark-hub';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 export function openHubDB() {
   return openDB<HubDB>(DB_NAME, DB_VERSION, {
@@ -30,6 +31,9 @@ export function openHubDB() {
       }
       if (oldVersion < 3) {
         db.createObjectStore('ignoredUrls', { keyPath: 'url' });
+      }
+      if (oldVersion < 4) {
+        db.createObjectStore('vpnHosts', { keyPath: 'host' });
       }
     },
   });

@@ -6,6 +6,7 @@ import { openHubDB, type HubDB } from '../db';
 import type { NetworkMode, Observation } from './classify';
 import {
   PROBE_URLS,
+  addVpnHosts,
   cancelScan,
   probeNetwork,
   recheckUrls,
@@ -124,6 +125,34 @@ describe('runScan', () => {
 
     expect(await db.count('scanResults')).toBe(0);
     expect((await db.get('scanRuns', 'current'))?.finishedAt).toBeNull();
+  });
+});
+
+describe('hosts that need VPN', () => {
+  it('classifies network failures on those hosts as maybe_vpn during a scan, without dns retry', async () => {
+    await db.put('vpnHosts', { host: 'corp.example.com', addedAt: 1 });
+    const check = vi.fn(netFail('net::ERR_NAME_NOT_RESOLVED'));
+
+    await run(deps(check), ['https://corp.example.com/wiki']);
+
+    expect(check).toHaveBeenCalledTimes(1);
+    expect(await db.get('scanResults', 'https://corp.example.com/wiki')).toMatchObject({
+      health: 'unknown',
+      failReason: 'maybe_vpn',
+    });
+  });
+
+  it('marks hosts and immediately moves their existing network failures to maybe_vpn', async () => {
+    await db.put('scanResults', { ...resultFor('https://corp.example.com/a'), health: 'broken', failReason: 'dns' });
+    await db.put('scanResults', { ...resultFor('https://corp.example.com/b'), health: 'broken', failReason: 'not_found' });
+    await db.put('scanResults', { ...resultFor('https://other.com/'), health: 'broken', failReason: 'dns' });
+
+    expect(await addVpnHosts(db, ['corp.example.com'], 5)).toBe(1);
+
+    expect(await db.get('scanResults', 'https://corp.example.com/a')).toMatchObject({ health: 'unknown', failReason: 'maybe_vpn' });
+    expect(await db.get('scanResults', 'https://corp.example.com/b')).toMatchObject({ health: 'broken', failReason: 'not_found' });
+    expect(await db.get('scanResults', 'https://other.com/')).toMatchObject({ health: 'broken', failReason: 'dns' });
+    expect(await db.getAllKeys('vpnHosts')).toEqual(['corp.example.com']);
   });
 });
 

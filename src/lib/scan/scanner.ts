@@ -3,6 +3,7 @@ import type { HubDB } from '../db';
 import {
   aggregateByHost,
   classify,
+  hostOf,
   isNetworkFailure,
   type Health,
   type NetworkMode,
@@ -37,6 +38,12 @@ export interface ScanRun {
 export interface IgnoredUrl {
   url: string;
   ignoredAt: number;
+}
+
+/** 用户标记为需要 VPN 才能访问的网站。 */
+export interface VpnHost {
+  host: string;
+  addedAt: number;
 }
 
 export interface ScanDeps {
@@ -76,24 +83,18 @@ export function scanTargets(bookmarks: { url: string }[]): string[] {
   return [...new Set(bookmarks.map((b) => b.url))].filter((url) => skipReason(url) === null);
 }
 
-const hostOf = (url: string) => {
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return url;
-  }
-};
-
 const countHealth = (results: ScanResult[]) => {
   const counts: Record<Health, number> = { healthy: 0, redirected: 0, broken: 0, suspicious: 0, unknown: 0 };
   for (const r of results) counts[r.health] += 1;
   return counts;
 };
 
-async function saveResult(deps: ScanDeps, url: string, obs: Observation, networkMode: NetworkMode) {
+const loadVpnHosts = async (db: IDBPDatabase<HubDB>) => new Set(await db.getAllKeys('vpnHosts'));
+
+async function saveResult(deps: ScanDeps, url: string, obs: Observation, networkMode: NetworkMode, vpnHosts: Set<string>) {
   const result: ScanResult = {
     url,
-    ...classify(obs, networkMode),
+    ...classify(obs, networkMode, { vpnHost: vpnHosts.has(hostOf(url)) }),
     httpStatus: obs.status ?? null,
     netError: obs.netError ?? null,
     networkMode,
@@ -125,6 +126,7 @@ export async function runScan(
   const finished = await resultsInRun(deps, urls, run);
   const finishedUrls = new Set(finished.map((r) => r.url));
   const pending = urls.filter((url) => !finishedUrls.has(url));
+  const vpnHosts = await loadVpnHosts(deps.db);
 
   const initialMode = await deps.probe();
   if (initialMode === 'offline') return 'offline';
@@ -161,7 +163,7 @@ export async function runScan(
       async (url) => {
         const obs = await deps.check(url, networkMode);
         if (stoppedOffline) return;
-        const result = await saveResult(deps, url, obs, networkMode);
+        const result = await saveResult(deps, url, obs, networkMode, vpnHosts);
         counts[result.health] += 1;
         done += 1;
         if (result.failReason === 'dns') dnsFailures.push(url);
@@ -193,7 +195,7 @@ export async function runScan(
   // ponytail: DNS 失败在扫描末尾统一重试一次；网址很少时离首次失败可能不足 PRD 说的 30 秒
   for (const url of dnsFailures) {
     if (signal.aborted) return 'aborted';
-    await saveResult(deps, url, await deps.check(url, networkMode), networkMode);
+    await saveResult(deps, url, await deps.check(url, networkMode), networkMode, vpnHosts);
   }
 
   const latest = await resultsInRun(deps, urls, run);
@@ -211,14 +213,42 @@ export async function runScan(
 export async function recheckUrls(deps: ScanDeps, urls: string[]): Promise<RecheckOutcome> {
   const mode = await deps.probe();
   if (mode === 'offline') return 'offline';
+  const vpnHosts = await loadVpnHosts(deps.db);
   await runQueue(
     urls,
     async (url) => {
-      await saveResult(deps, url, await deps.check(url, mode), mode);
+      await saveResult(deps, url, await deps.check(url, mode), mode, vpnHosts);
     },
     { concurrency: GLOBAL_CONCURRENCY, perKey: PER_HOST_CONCURRENCY, keyOf: hostOf },
   );
   return 'done';
+}
+
+/**
+ * 标记网站需要 VPN，并立即把这些网站已有的网络层失败结果改为「可能需要 VPN」，
+ * 这样公司内网这类「域名无法解析」的书签会从失效列表移到待确认。返回改动的结果数。
+ */
+export async function addVpnHosts(db: IDBPDatabase<HubDB>, hosts: string[], now: number): Promise<number> {
+  const hostSet = new Set(hosts);
+  const affected = (await db.getAll('scanResults')).filter(
+    (r) =>
+      hostSet.has(hostOf(r.url)) &&
+      r.failReason !== 'maybe_vpn' &&
+      (isNetworkFailure(r) || r.failReason === 'site_unreachable'),
+  );
+  const tx = db.transaction(['vpnHosts', 'scanResults'], 'readwrite');
+  await Promise.all([
+    ...[...hostSet].map((host) => tx.objectStore('vpnHosts').put({ host, addedAt: now })),
+    ...affected.map((r) =>
+      tx.objectStore('scanResults').put({ ...r, health: 'unknown', failReason: 'maybe_vpn' }),
+    ),
+    tx.done,
+  ]);
+  return affected.length;
+}
+
+export async function removeVpnHost(db: IDBPDatabase<HubDB>, host: string): Promise<void> {
+  await db.delete('vpnHosts', host);
 }
 
 /** 放弃当前这一轮的进度，下次扫描从头开始（已有结果保留）。 */

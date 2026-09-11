@@ -76,9 +76,14 @@ function movedToHome(requestedUrl: string, finalUrl: string) {
   }
 }
 
-// 网络受限（境外不通）时，网络层错误一律不判失效，交给用户连上 VPN 后重新检测
-function classifyNetworkError(obs: Observation, mode: NetworkMode): Verdict {
-  if (mode === 'restricted') return verdict('unknown', 'maybe_vpn');
+export interface ClassifyOptions {
+  /** 用户标记过「需要 VPN」的网站 */
+  vpnHost?: boolean;
+}
+
+// 网络受限（境外不通）或网站被标记为需要 VPN 时，网络层错误不判失效，交给用户连上 VPN 后重新检测
+function classifyNetworkError(obs: Observation, mode: NetworkMode, vpnHost: boolean): Verdict {
+  if (mode === 'restricted' || vpnHost) return verdict('unknown', 'maybe_vpn');
   if (obs.netError === 'net::ERR_NAME_NOT_RESOLVED') return verdict('broken', 'dns');
   if (obs.netError?.startsWith('net::ERR_CERT_')) return verdict('suspicious', 'cert');
   if (obs.timedOut) return verdict('unknown', 'timeout');
@@ -102,13 +107,13 @@ function classifyResponse(obs: Observation, status: number): Verdict {
 }
 
 /** 按 PRD §13 判定表把一次检测结果归类。 */
-export function classify(obs: Observation, mode: NetworkMode): Verdict {
+export function classify(obs: Observation, mode: NetworkMode, { vpnHost = false }: ClassifyOptions = {}): Verdict {
   if (obs.netError === 'net::ERR_TOO_MANY_REDIRECTS') return verdict('suspicious', 'too_many_redirects');
-  if (obs.status === undefined) return classifyNetworkError(obs, mode);
+  if (obs.status === undefined) return classifyNetworkError(obs, mode, vpnHost);
   return classifyResponse(obs, obs.status);
 }
 
-const hostOf = (url: string) => {
+export const hostOf = (url: string) => {
   try {
     return new URL(url).hostname;
   } catch {

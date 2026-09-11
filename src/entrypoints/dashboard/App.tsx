@@ -9,6 +9,7 @@ import {
   Link2Off,
   List,
   Search,
+  Settings,
 } from 'lucide-react';
 import { useBookmarkTree } from '@/hooks/useBookmarkTree';
 import { buildIndex } from '@/lib/bookmarks';
@@ -19,11 +20,21 @@ import { HistoryView } from '@/components/HistoryView';
 import { DuplicatesView } from '@/components/DuplicatesView';
 import { ScanView } from '@/components/ScanView';
 import { IssuesView } from '@/components/IssuesView';
+import { SettingsView } from '@/components/SettingsView';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Toaster } from '@/components/ui/sonner';
 
-type View = 'overview' | 'bookmarks' | 'scan' | 'broken' | 'duplicates' | 'redirected' | 'pending' | 'history';
+type View =
+  | 'overview'
+  | 'bookmarks'
+  | 'scan'
+  | 'broken'
+  | 'duplicates'
+  | 'redirected'
+  | 'pending'
+  | 'history'
+  | 'settings';
 
 const NAV_GROUPS = [
   { label: '概览', items: [{ view: 'overview', label: '总览', icon: LayoutDashboard }] },
@@ -38,7 +49,13 @@ const NAV_GROUPS = [
       { view: 'pending', label: '待确认', icon: CircleHelp },
     ],
   },
-  { label: '系统', items: [{ view: 'history', label: '操作记录', icon: History }] },
+  {
+    label: '系统',
+    items: [
+      { view: 'history', label: '操作记录', icon: History },
+      { view: 'settings', label: '设置', icon: Settings },
+    ],
+  },
 ] as const;
 
 export function App() {
@@ -111,6 +128,7 @@ export function App() {
         )}
         {view === 'duplicates' && <DuplicatesView index={index} />}
         {view === 'history' && <HistoryView />}
+        {view === 'settings' && <SettingsView />}
       </main>
 
       <Toaster position="bottom-right" />
