@@ -4,6 +4,7 @@ export interface TreeNode {
   title: string;
   url?: string;
   parentId?: string;
+  index?: number;
   dateAdded?: number;
   children?: TreeNode[];
 }
@@ -26,6 +27,11 @@ export interface BookmarkIndex {
   folderCount: number;
   /** 目录 id → 该目录及其子目录下的书签总数 */
   countByFolder: Map<string, number>;
+}
+
+export interface FolderOption {
+  id: string;
+  path: string;
 }
 
 export interface DomainCount {
@@ -80,6 +86,21 @@ export function buildIndex(roots: TreeNode[]): BookmarkIndex {
 
   roots.forEach((root) => walk(root, 0, []));
   return { bookmarks, folderCount, countByFolder };
+}
+
+/** 除根节点外的全部目录，按树的顺序排列，带完整路径，供「移动到」选择。 */
+export function listFolders(roots: TreeNode[]): FolderOption[] {
+  const result: FolderOption[] = [];
+  const walk = (node: TreeNode, parentPath: string) => {
+    for (const child of node.children ?? []) {
+      if (child.url !== undefined) continue;
+      const path = parentPath ? `${parentPath}${PATH_SEPARATOR}${child.title}` : child.title;
+      result.push({ id: child.id, path });
+      walk(child, path);
+    }
+  };
+  roots.forEach((root) => walk(root, ''));
+  return result;
 }
 
 export function topDomains(bookmarks: Bookmark[], limit: number): DomainCount[] {

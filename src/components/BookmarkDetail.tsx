@@ -1,12 +1,13 @@
-import { ExternalLink } from 'lucide-react';
-import type { Bookmark } from '@/lib/bookmarks';
-import { Button } from '@/components/ui/button';
+import type { Bookmark, FolderOption } from '@/lib/bookmarks';
 import { Separator } from '@/components/ui/separator';
+import { BookmarkActions } from './BookmarkActions';
 
-// javascript: 等链接不能从扩展页打开
-const OPENABLE = /^(https?|ftp):/i;
+interface Props {
+  bookmark: Bookmark | undefined;
+  folders: FolderOption[];
+}
 
-export function BookmarkDetail({ bookmark }: { bookmark: Bookmark | undefined }) {
+export function BookmarkDetail({ bookmark, folders }: Props) {
   if (!bookmark) {
     return (
       <aside className="flex items-center justify-center border-l p-5 text-sm text-muted-foreground">
@@ -37,14 +38,7 @@ export function BookmarkDetail({ bookmark }: { bookmark: Bookmark | undefined })
           </div>
         ))}
       </dl>
-      {OPENABLE.test(bookmark.url) && (
-        <Button asChild size="sm" className="mt-5">
-          <a href={bookmark.url} target="_blank" rel="noreferrer">
-            <ExternalLink />
-            打开
-          </a>
-        </Button>
-      )}
+      <BookmarkActions key={bookmark.id} bookmark={bookmark} folders={folders} />
     </aside>
   );
 }

@@ -1,17 +1,20 @@
 import { useMemo, useState } from 'react';
-import { Bookmark, LayoutDashboard, List, Search } from 'lucide-react';
+import { Bookmark, History, LayoutDashboard, List, Search } from 'lucide-react';
 import { useBookmarkTree } from '@/hooks/useBookmarkTree';
 import { buildIndex } from '@/lib/bookmarks';
 import { Overview } from '@/components/Overview';
 import { BookmarksView } from '@/components/BookmarksView';
+import { HistoryView } from '@/components/HistoryView';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Toaster } from '@/components/ui/sonner';
 
-type View = 'overview' | 'bookmarks';
+type View = 'overview' | 'bookmarks' | 'history';
 
 const NAV_ITEMS = [
   { view: 'overview', label: '总览', icon: LayoutDashboard },
   { view: 'bookmarks', label: '全部书签', icon: List },
+  { view: 'history', label: '操作记录', icon: History },
 ] as const;
 
 export function App() {
@@ -63,9 +66,8 @@ export function App() {
       </nav>
 
       <main className="min-h-0 overflow-auto">
-        {view === 'overview' ? (
-          <Overview index={index} />
-        ) : (
+        {view === 'overview' && <Overview index={index} />}
+        {view === 'bookmarks' && (
           <BookmarksView
             roots={tree}
             index={index}
@@ -74,7 +76,10 @@ export function App() {
             onSelectFolder={setFolderId}
           />
         )}
+        {view === 'history' && <HistoryView />}
       </main>
+
+      <Toaster position="bottom-right" />
     </div>
   );
 }

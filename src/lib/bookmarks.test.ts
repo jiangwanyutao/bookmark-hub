@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildIndex, getDomain, searchBookmarks, topDomains, type TreeNode } from './bookmarks';
+import { buildIndex, getDomain, listFolders, searchBookmarks, topDomains, type TreeNode } from './bookmarks';
 
 // 结构与 chrome.bookmarks.getTree() 一致：一个无标题根节点，下面是浏览器内置目录
 const tree: TreeNode[] = [
@@ -110,5 +110,17 @@ describe('searchBookmarks', () => {
 
   it('matches folder path as well as title and url', () => {
     expect(ids(searchBookmarks(bookmarks, '开发 ai'))).toEqual(['1000', '1001']);
+  });
+});
+
+describe('listFolders', () => {
+  it('lists every folder except the root, in tree order, with full paths', () => {
+    expect(listFolders(tree)).toEqual([
+      { id: '1', path: '书签栏' },
+      { id: '10', path: '书签栏 / 开发' },
+      { id: '100', path: '书签栏 / 开发 / AI' },
+      { id: '2', path: '其他书签' },
+      { id: '20', path: '其他书签 / 空目录' },
+    ]);
   });
 });

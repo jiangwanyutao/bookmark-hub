@@ -10,7 +10,7 @@ export default defineConfig({
   manifest: {
     name: 'Bookmark Hub',
     description: '检测、清理、整理你的浏览器书签',
-    permissions: ['bookmarks'],
+    permissions: ['bookmarks', 'unlimitedStorage'],
     action: { default_title: 'Bookmark Hub' },
   },
 });

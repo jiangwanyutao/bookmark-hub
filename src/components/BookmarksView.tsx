@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { searchBookmarks, type BookmarkIndex, type TreeNode } from '@/lib/bookmarks';
+import { listFolders, searchBookmarks, type BookmarkIndex, type TreeNode } from '@/lib/bookmarks';
 import { FolderTree } from './FolderTree';
 import { BookmarkList } from './BookmarkList';
 import { BookmarkDetail } from './BookmarkDetail';
@@ -36,7 +36,7 @@ export function BookmarksView({ roots, index, query, folderId, onSelectFolder }:
         </p>
         <BookmarkList bookmarks={visible} selectedId={selectedId} onSelect={setSelectedId} />
       </section>
-      <BookmarkDetail bookmark={selected} />
+      <BookmarkDetail bookmark={selected} folders={listFolders(roots)} />
     </div>
   );
 }
