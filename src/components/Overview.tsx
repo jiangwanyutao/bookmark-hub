@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { ChevronRight } from 'lucide-react';
-import { topDomains, type BookmarkIndex } from '@/lib/bookmarks';
+import { topDomains, type BookmarkIndex, type TreeNode } from '@/lib/bookmarks';
+import { folderTiles, squarify } from '@/lib/treemap';
 import { findDuplicateGroups, redundantCount } from '@/lib/duplicates';
 import { healthScore, isUncategorized } from '@/lib/health';
 import { summarizeHealth } from '@/lib/scan/scanner';
@@ -10,6 +11,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/components/ui/progress';
 
 const TOP_DOMAIN_LIMIT = 10;
+const MAP_TILE_LIMIT = 12;
+// 在 200×100 的坐标里布局，渲染时换算成百分比，容器用 2:1 比例
+const MAP_W = 200;
+const MAP_H = 100;
 
 const formatCount = (n: number) => n.toLocaleString('zh-CN');
 
@@ -17,11 +22,13 @@ type Target = 'scan' | 'broken' | 'duplicates' | 'redirected' | 'pending';
 
 interface Props {
   index: BookmarkIndex;
+  roots: TreeNode[];
   barId: string;
   onNavigate: (target: Target) => void;
+  onOpenFolder: (folderId: string) => void;
 }
 
-export function Overview({ index, barId, onNavigate }: Props) {
+export function Overview({ index, roots, barId, onNavigate, onOpenFolder }: Props) {
   const { results, ignored } = useScanResults();
   const domains = topDomains(index.bookmarks, TOP_DOMAIN_LIMIT);
   const maxCount = domains[0]?.count ?? 0;
@@ -55,6 +62,12 @@ export function Overview({ index, barId, onNavigate }: Props) {
     { label: '个书签还没扫描', count: health.unscanned, action: '扫描书签', target: 'scan' },
   ];
   const openTasks = tasks.filter((t) => t.count > 0);
+
+  const tiles = useMemo(() => folderTiles(roots, index.countByFolder, MAP_TILE_LIMIT), [roots, index]);
+  const rects = useMemo(
+    () => squarify(tiles.map((t) => ({ id: t.id, value: t.value })), { x: 0, y: 0, w: MAP_W, h: MAP_H }),
+    [tiles],
+  );
 
   return (
     <section className="mx-auto max-w-5xl space-y-6 p-8">
@@ -119,6 +132,51 @@ export function Overview({ index, barId, onNavigate }: Props) {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>书签地图</CardTitle>
+          <CardDescription>面积代表书签数量，点击进入对应目录。</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {rects.length === 0 ? (
+            <p className="text-sm text-muted-foreground">还没有书签。</p>
+          ) : (
+            <div className="relative aspect-[2/1] w-full overflow-hidden rounded-md">
+              {rects.map((r) => {
+                const rank = tiles.findIndex((t) => t.id === r.id);
+                const tile = tiles[rank]!;
+                // 越大的目录颜色越深
+                const shade = 95 - (rank / Math.max(tiles.length - 1, 1)) * 45;
+                return (
+                  <div
+                    key={r.id}
+                    className="absolute p-0.5"
+                    style={{
+                      left: `${(r.x / MAP_W) * 100}%`,
+                      top: `${(r.y / MAP_H) * 100}%`,
+                      width: `${(r.w / MAP_W) * 100}%`,
+                      height: `${(r.h / MAP_H) * 100}%`,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      disabled={!tile.folderId}
+                      onClick={() => tile.folderId && onOpenFolder(tile.folderId)}
+                      title={`${tile.name}：${tile.value} 个书签`}
+                      className="flex size-full flex-col items-start overflow-hidden rounded-sm p-2 text-left text-xs text-primary-foreground outline-none hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default disabled:hover:opacity-100"
+                      style={{ backgroundColor: `color-mix(in oklch, var(--primary) ${shade}%, var(--muted))` }}
+                    >
+                      <span className="w-full truncate font-medium">{tile.name}</span>
+                      <span className="tabular-nums opacity-80">{formatCount(tile.value)}</span>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card className="max-w-xl">
         <CardHeader>

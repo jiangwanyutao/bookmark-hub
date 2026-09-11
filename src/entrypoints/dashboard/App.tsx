@@ -121,7 +121,18 @@ export function App() {
       </nav>
 
       <main className="min-h-0 overflow-auto">
-        {view === 'overview' && <Overview index={index} barId={bookmarksBarId(tree)} onNavigate={setView} />}
+        {view === 'overview' && (
+          <Overview
+            index={index}
+            roots={tree}
+            barId={bookmarksBarId(tree)}
+            onNavigate={setView}
+            onOpenFolder={(id) => {
+              setFolderId(id);
+              setView('bookmarks');
+            }}
+          />
+        )}
         {view === 'bookmarks' && (
           <BookmarksView
             roots={tree}
