@@ -21,6 +21,8 @@ export const FAIL_REASON_LABEL: Record<FailReason, string> = {
   server_error: '网站暂时故障',
   http_error: '请求被拒绝',
   site_unreachable: '整个网站当前无法访问',
+  soft_404: '疑似页面已删除（页面显示找不到）',
+  insecure_redirect: '跳到了不安全的 http 页面，Chrome 打开时会拦截',
 };
 
 const matches = (kind: IssueKind, r: ScanResult) =>

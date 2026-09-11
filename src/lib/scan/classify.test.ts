@@ -40,6 +40,48 @@ describe('classify', () => {
   });
 });
 
+describe('classify https → http downgrade', () => {
+  const downgraded = { health: 'suspicious', failReason: 'insecure_redirect', redirectTo: null };
+
+  it('flags a permanent redirect from https to http instead of suggesting the http url', () => {
+    expect(classify(at('http://a.com/post/1', [301]), 'normal')).toEqual(downgraded);
+  });
+
+  it('flags a temporary redirect from https to http too, since Chrome blocks it on open', () => {
+    expect(classify(at('http://b.com/post/1', [302]), 'normal')).toEqual(downgraded);
+  });
+
+  it('does not flag bookmarks that were http to begin with', () => {
+    const httpBookmark = obs({ requestedUrl: 'http://a.com/x', status: 200, finalUrl: 'http://a.com/y', redirectStatuses: [302] });
+    expect(classify(httpBookmark, 'normal').health).toBe('healthy');
+  });
+
+  it('still suggests upgrading http to https', () => {
+    const upgrade = obs({ requestedUrl: 'http://a.com/x', status: 200, finalUrl: 'https://a.com/x', redirectStatuses: [301] });
+    expect(classify(upgrade, 'normal')).toEqual({ health: 'redirected', failReason: null, redirectTo: 'https://a.com/x' });
+  });
+});
+
+describe('classify soft 404', () => {
+  it('marks a 200 page whose title says it is gone as suspicious', () => {
+    expect(classify(obs({ status: 200, finalUrl: 'https://a.com/post/1', title: '页面不存在' }), 'normal')).toEqual({
+      health: 'suspicious',
+      failReason: 'soft_404',
+      redirectTo: null,
+    });
+  });
+
+  it('prefers soft 404 over a permanent-redirect suggestion', () => {
+    expect(classify(at('https://a.com/404', [301]), 'normal').failReason).toBe('soft_404');
+  });
+
+  it('keeps normal pages healthy when a title is known', () => {
+    expect(classify(obs({ status: 200, finalUrl: 'https://a.com/post/1', title: 'React 性能优化' }), 'normal').health).toBe(
+      'healthy',
+    );
+  });
+});
+
 describe('classify on a host the user marked as needing VPN', () => {
   it('treats network failures as maybe_vpn even on a normal network', () => {
     expect(classify(obs({ netError: 'net::ERR_NAME_NOT_RESOLVED' }), 'normal', { vpnHost: true })).toEqual({

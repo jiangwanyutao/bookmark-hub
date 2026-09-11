@@ -1,3 +1,5 @@
+import { looksLikeSoft404 } from './soft404';
+
 export type NetworkMode = 'normal' | 'restricted';
 
 export type Health = 'healthy' | 'redirected' | 'broken' | 'suspicious' | 'unknown';
@@ -15,7 +17,11 @@ export type FailReason =
   | 'rate_limited'
   | 'server_error'
   | 'http_error'
-  | 'site_unreachable';
+  | 'site_unreachable'
+  /** 返回 200 但页面显示「找不到」 */
+  | 'soft_404'
+  /** https 书签被跳到了 http，Chrome 打开时会拦截 */
+  | 'insecure_redirect';
 
 /** 一次检测看到的事实：有响应就有 status，否则是网络层错误或超时。 */
 export interface Observation {
@@ -27,6 +33,8 @@ export interface Observation {
   /** Chrome 网络错误码，如 net::ERR_NAME_NOT_RESOLVED */
   netError?: string;
   timedOut?: boolean;
+  /** 最终页面的 <title>，仅 2xx 的 HTML 页面才会读取，用于软 404 检测 */
+  title?: string | null;
 }
 
 export interface Verdict {
@@ -68,6 +76,17 @@ function isLoginUrl(url: string) {
   }
 }
 
+const protocolOf = (url: string) => {
+  try {
+    return new URL(url).protocol;
+  } catch {
+    return null;
+  }
+};
+
+const isDowngrade = (requestedUrl: string, finalUrl: string | undefined) =>
+  finalUrl !== undefined && protocolOf(requestedUrl) === 'https:' && protocolOf(finalUrl) === 'http:';
+
 function movedToHome(requestedUrl: string, finalUrl: string) {
   try {
     return new URL(requestedUrl).pathname.length > 1 && new URL(finalUrl).pathname === '/';
@@ -98,6 +117,10 @@ function classifyResponse(obs: Observation, status: number): Verdict {
   if (status === 429) return verdict('unknown', 'rate_limited');
   if (status >= 500) return verdict('unknown', 'server_error');
   if (status < 200 || status >= 300) return verdict('unknown', 'http_error');
+
+  if (looksLikeSoft404(obs)) return verdict('suspicious', 'soft_404');
+  // https 被跳到 http：不论永久还是临时，Chrome 打开时都会拦截，也不能建议「更新」成 http
+  if (redirected && isDowngrade(obs.requestedUrl, obs.finalUrl)) return verdict('suspicious', 'insecure_redirect');
 
   // 只有整条跳转链都是 301 / 308 才建议更新；302 / 307 多为临时跳转
   const permanent = redirected && obs.redirectStatuses.every((s) => PERMANENT_REDIRECTS.has(s));
