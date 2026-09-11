@@ -12,6 +12,7 @@
     "zip": "wxt zip",
     "compile": "tsc --noEmit",
     "test": "vitest run",
+    "e2e": "pnpm build && node e2e/agent-organize.mjs",
     "postinstall": "wxt prepare"
   },
   "dependencies": {
@@ -37,6 +38,7 @@
     "@types/react-dom": "^19.3.0",
     "@wxt-dev/module-react": "^1.2.2",
     "fake-indexeddb": "^6.2.5",
+    "playwright": "1.63.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vitest": "^5.0.0",
