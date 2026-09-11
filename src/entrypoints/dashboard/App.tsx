@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Bookmark, History, LayoutDashboard, List, Search } from 'lucide-react';
+import { History, LayoutDashboard, List, Search } from 'lucide-react';
 import { useBookmarkTree } from '@/hooks/useBookmarkTree';
 import { buildIndex } from '@/lib/bookmarks';
 import { Overview } from '@/components/Overview';
@@ -31,7 +31,7 @@ export function App() {
     <div className="grid h-screen grid-cols-[200px_1fr] grid-rows-[56px_1fr]">
       <header className="col-span-2 flex items-center gap-8 border-b px-5">
         <span className="flex items-center gap-2 font-semibold text-primary">
-          <Bookmark className="size-5" />
+          <img src="/icon-48.png" alt="" className="size-7 rounded-md" />
           Bookmark Hub
         </span>
         <div className="relative w-full max-w-md">
