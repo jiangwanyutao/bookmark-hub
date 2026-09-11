@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { isIntranetHost, skipReason } from './rules';
+import { isIntranetHost, skipReason, stripSensitiveParams } from './rules';
+
+describe('stripSensitiveParams', () => {
+  it('removes sensitive parameters case-insensitively and keeps the rest', () => {
+    expect(stripSensitiveParams('https://x.com/p?Token=1&id=2&code=3')).toBe('https://x.com/p?id=2');
+  });
+
+  it('leaves urls without sensitive parameters and non-urls unchanged', () => {
+    expect(stripSensitiveParams('https://x.com/p?id=2')).toBe('https://x.com/p?id=2');
+    expect(stripSensitiveParams('not a url')).toBe('not a url');
+  });
+});
 
 describe('isIntranetHost', () => {
   it.each([

@@ -10,6 +10,7 @@ import {
   List,
   Search,
   Settings,
+  Sparkles,
 } from 'lucide-react';
 import { useBookmarkTree } from '@/hooks/useBookmarkTree';
 import { buildIndex } from '@/lib/bookmarks';
@@ -21,6 +22,7 @@ import { DuplicatesView } from '@/components/DuplicatesView';
 import { ScanView } from '@/components/ScanView';
 import { IssuesView } from '@/components/IssuesView';
 import { SettingsView } from '@/components/SettingsView';
+import { OrganizeView } from '@/components/OrganizeView';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Toaster } from '@/components/ui/sonner';
@@ -28,6 +30,7 @@ import { Toaster } from '@/components/ui/sonner';
 type View =
   | 'overview'
   | 'bookmarks'
+  | 'organize'
   | 'scan'
   | 'broken'
   | 'duplicates'
@@ -38,7 +41,13 @@ type View =
 
 const NAV_GROUPS = [
   { label: '概览', items: [{ view: 'overview', label: '总览', icon: LayoutDashboard }] },
-  { label: '书签', items: [{ view: 'bookmarks', label: '全部书签', icon: List }] },
+  {
+    label: '书签',
+    items: [
+      { view: 'bookmarks', label: '全部书签', icon: List },
+      { view: 'organize', label: '智能整理', icon: Sparkles },
+    ],
+  },
   {
     label: '清理',
     items: [
@@ -121,6 +130,9 @@ export function App() {
             folderId={folderId}
             onSelectFolder={setFolderId}
           />
+        )}
+        {view === 'organize' && (
+          <OrganizeView index={index} roots={tree} onOpenSettings={() => setView('settings')} />
         )}
         {view === 'scan' && <ScanView bookmarks={index.bookmarks} />}
         {(view === 'broken' || view === 'redirected' || view === 'pending') && (

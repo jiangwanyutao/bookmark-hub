@@ -36,6 +36,20 @@ export function isIntranetHost(hostname: string): boolean {
   return !host.includes('.');
 }
 
+/** 去掉敏感参数（不区分大小写），用于把网址发给 AI 之前；没有敏感参数时原样返回。 */
+export function stripSensitiveParams(url: string): string {
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    return url;
+  }
+  const sensitive = [...u.searchParams.keys()].filter((name) => SENSITIVE_PARAMS.has(name.toLowerCase()));
+  if (sensitive.length === 0) return url;
+  sensitive.forEach((name) => u.searchParams.delete(name));
+  return u.toString();
+}
+
 /** 扫描时不发请求的原因；可以扫描时返回 null。 */
 export function skipReason(url: string): SkipReason | null {
   let u: URL;

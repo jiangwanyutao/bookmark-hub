@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { AiSettingsCard } from './AiSettingsCard';
 
 /** 接受「wiki.company.com」或整条网址，取出域名；无效时返回 null。 */
 function parseHost(value: string): string | null {
@@ -58,6 +59,8 @@ export function SettingsView() {
   return (
     <section className="mx-auto max-w-3xl space-y-6 p-8">
       <h1 className="text-2xl font-semibold">设置</h1>
+
+      <AiSettingsCard />
 
       <Card>
         <CardHeader>
