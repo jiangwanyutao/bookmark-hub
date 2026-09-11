@@ -47,8 +47,21 @@ describe('applyAgentEvent', () => {
       { type: 'tool_execution_end', toolCallId: 't2', toolName: 'assign', result: { content: [{ type: 'text', text: '编号不存在：b9' }] }, isError: true },
     ]);
     expect(items).toEqual([
-      { kind: 'tool', id: 't1', label: '分配 2 个书签到「教程」', status: 'done' },
-      { kind: 'tool', id: 't2', label: '分配 1 个书签到「教程」', status: 'error', detail: '编号不存在：b9' },
+      { kind: 'tool', id: 'tool-0', toolCallId: 't1', label: '分配 2 个书签到「教程」', status: 'done' },
+      { kind: 'tool', id: 'tool-1', toolCallId: 't2', label: '分配 1 个书签到「教程」', status: 'error', detail: '编号不存在：b9' },
+    ]);
+  });
+
+  it('tells two tool calls apart even when a backend reuses the same toolCallId', () => {
+    const items = reduce([
+      { type: 'tool_execution_start', toolCallId: 'call_0', toolName: 'list_folders', args: {} },
+      { type: 'tool_execution_end', toolCallId: 'call_0', toolName: 'list_folders', result: { content: [{ type: 'text', text: 'ok' }] }, isError: false },
+      { type: 'tool_execution_start', toolCallId: 'call_0', toolName: 'assign', args: { refs: ['b1'], category: '教程' } },
+      { type: 'tool_execution_end', toolCallId: 'call_0', toolName: 'assign', result: { content: [{ type: 'text', text: 'ok' }] }, isError: false },
+    ]);
+    expect(items).toEqual([
+      { kind: 'tool', id: 'tool-0', toolCallId: 'call_0', label: '查看目录', status: 'done' },
+      { kind: 'tool', id: 'tool-1', toolCallId: 'call_0', label: '分配 1 个书签到「教程」', status: 'done' },
     ]);
   });
 
