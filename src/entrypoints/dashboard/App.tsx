@@ -5,6 +5,7 @@ import {
   Copy,
   CornerUpRight,
   History,
+  Compass,
   LayoutDashboard,
   Link2Off,
   List,
@@ -23,12 +24,14 @@ import { ScanView } from '@/components/ScanView';
 import { IssuesView } from '@/components/IssuesView';
 import { SettingsView } from '@/components/SettingsView';
 import { OrganizeView } from '@/components/OrganizeView';
+import { LauncherView } from '@/components/LauncherView';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Toaster } from '@/components/ui/sonner';
 
 type View =
   | 'overview'
+  | 'launcher'
   | 'bookmarks'
   | 'organize'
   | 'scan'
@@ -44,6 +47,7 @@ const NAV_GROUPS = [
   {
     label: '书签',
     items: [
+      { view: 'launcher', label: '书签导航', icon: Compass },
       { view: 'bookmarks', label: '全部书签', icon: List },
       { view: 'organize', label: '智能整理', icon: Sparkles },
     ],
@@ -133,6 +137,7 @@ export function App() {
             }}
           />
         )}
+        {view === 'launcher' && <LauncherView roots={tree} index={index} />}
         {view === 'bookmarks' && (
           <BookmarksView
             roots={tree}
