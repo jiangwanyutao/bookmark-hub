@@ -2,7 +2,7 @@ import type { IDBPDatabase } from 'idb';
 import type { Bookmark } from '../bookmarks';
 import type { HubDB } from '../db';
 import type { AiItem, ChatMessage, Privacy } from './prompt';
-import { extractJson, INVALID_JSON } from './parse';
+import { extractJson, INVALID_JSON } from './json';
 import { inBatches, type BatchOptions, type Complete } from './batches';
 
 /** 按网址存：书签撤销恢复后 id 会变，网址不变。标签只是本机元数据，不改动浏览器书签。 */
