@@ -1,5 +1,5 @@
-import { useMemo, type ComponentType, type ReactNode } from 'react';
-import { Activity, ChevronRight, CircleDashed, CircleHelp, Copy, CornerUpRight, Link2Off, ShieldCheck, Sparkles } from 'lucide-react';
+import { useMemo, useState, type ComponentType, type ReactNode } from 'react';
+import { Activity, CircleDashed, CircleHelp, Copy, CornerUpRight, Link2Off, ShieldCheck, Sparkles } from 'lucide-react';
 import { topDomains, type BookmarkIndex, type TreeNode } from '@/lib/bookmarks';
 import { folderTiles } from '@/lib/treemap';
 import { findDuplicateGroups, redundantCount } from '@/lib/duplicates';
@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { Lighthouse } from './brand/Lighthouse';
 import { Bookshelf } from './Bookshelf';
 import { CountUp } from './CountUp';
+import { DistributionBars } from './DistributionBars';
 import { Favicon } from './Favicon';
 import { PageHeader } from './PageHeader';
 import { Panel } from './Panel';
@@ -31,6 +32,7 @@ const formatCount = (n: number) => n.toLocaleString('zh-CN');
 
 type Target = 'scan' | 'broken' | 'duplicates' | 'redirected' | 'pending' | 'organize';
 type Icon = ComponentType<{ className?: string }>;
+type DistView = 'bars' | 'shelf';
 
 interface Props {
   index: BookmarkIndex;
@@ -112,9 +114,17 @@ function healthNote(causes: { label: string; count: number }[], unscanned: numbe
   );
 }
 
+// 分段控件：选中段用主色实底
+const segment = (isActive: boolean) =>
+  cn(
+    'rounded-md px-2.5 py-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring',
+    isActive ? 'bg-primary font-medium text-primary-foreground' : 'text-muted-foreground hover:text-foreground',
+  );
+
 export function Overview({ index, roots, barId, onNavigate, onOpenFolder }: Props) {
   const { results, ignored } = useScanResults();
   const domains = topDomains(index.bookmarks, TOP_DOMAIN_LIMIT);
+  const [distView, setDistView] = useState<DistView>('bars');
 
   const duplicates = useMemo(() => redundantCount(findDuplicateGroups(index.bookmarks)), [index]);
   const health = useMemo(() => summarizeHealth(index.bookmarks, results, ignored), [index, results, ignored]);
@@ -138,17 +148,17 @@ export function Overview({ index, roots, barId, onNavigate, onOpenFolder }: Prop
     health.unscanned,
   );
 
-  const tasks: { phrase: string; hint: string; count: number; target: Target; icon: Icon }[] = [
-    { phrase: `${formatCount(health.broken)} 个失效链接`, hint: '网页已经打不开，可以删除或忽略', count: health.broken, target: 'broken', icon: Link2Off },
-    { phrase: `${formatCount(duplicates)} 条重复书签`, hint: '同一个网址收藏了不止一次', count: duplicates, target: 'duplicates', icon: Copy },
-    { phrase: `${formatCount(health.redirected)} 个网址已搬家`, hint: '网站换了新地址，可以一键更新', count: health.redirected, target: 'redirected', icon: CornerUpRight },
-    { phrase: `${formatCount(health.pending)} 个链接待确认`, hint: '暂时判断不了，需要你看一眼', count: health.pending, target: 'pending', icon: CircleHelp },
-    { phrase: `${formatCount(health.unscanned)} 个书签还没检查`, hint: '检查一遍才知道哪些已经失效', count: health.unscanned, target: 'scan', icon: Activity },
+  const tasks: { phrase: string; hint: string; action: string; count: number; target: Target; icon: Icon }[] = [
+    { phrase: `${formatCount(health.broken)} 个失效链接`, hint: '网页已经打不开，可以删除或忽略', action: '去处理', count: health.broken, target: 'broken', icon: Link2Off },
+    { phrase: `${formatCount(duplicates)} 条重复书签`, hint: '同一个网址收藏了不止一次', action: '去清理', count: duplicates, target: 'duplicates', icon: Copy },
+    { phrase: `${formatCount(health.redirected)} 个网址已搬家`, hint: '网站换了新地址，可以一键更新', action: '一键更新', count: health.redirected, target: 'redirected', icon: CornerUpRight },
+    { phrase: `${formatCount(health.pending)} 个链接待确认`, hint: '暂时判断不了，需要你看一眼', action: '去看看', count: health.pending, target: 'pending', icon: CircleHelp },
+    { phrase: `${formatCount(health.unscanned)} 个书签还没检查`, hint: '检查一遍才知道哪些已经失效', action: '开始扫描', count: health.unscanned, target: 'scan', icon: Activity },
   ];
   const openTasks = tasks.filter((t) => t.count > 0);
   const tiles = useMemo(() => folderTiles(roots, index.countByFolder, SHELF_BOOK_LIMIT), [roots, index]);
 
-  // 一屏完成：统计卡一行，下面书架与右侧两块面板等高，长内容在面板内滚动
+  // 一屏完成：统计卡一行，下面分布面板与右侧两块等分面板等高，长内容在面板内滚动
   return (
     <div className="flex h-full min-h-[640px] flex-col gap-4 px-6 py-5">
       <PageHeader
@@ -195,36 +205,60 @@ export function Overview({ index, roots, barId, onNavigate, onOpenFolder }: Prop
       </div>
 
       <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <Panel title="书签分布" meta={`${tiles.length} 个目录`} className="min-h-72">
-          <Bookshelf tiles={tiles} roots={roots} countByFolder={index.countByFolder} onOpenFolder={onOpenFolder} />
+        <Panel
+          title="书签分布"
+          meta={`${tiles.length} 个目录`}
+          actions={
+            <div role="group" aria-label="分布视图" className="inline-flex rounded-lg bg-muted p-0.5">
+              <button type="button" aria-pressed={distView === 'bars'} className={segment(distView === 'bars')} onClick={() => setDistView('bars')}>
+                条形
+              </button>
+              <button type="button" aria-pressed={distView === 'shelf'} className={segment(distView === 'shelf')} onClick={() => setDistView('shelf')}>
+                书架
+              </button>
+            </div>
+          }
+          className="min-h-72"
+        >
+          {distView === 'bars' ? (
+            <DistributionBars tiles={tiles} roots={roots} countByFolder={index.countByFolder} onOpenFolder={onOpenFolder} />
+          ) : (
+            <Bookshelf tiles={tiles} roots={roots} countByFolder={index.countByFolder} onOpenFolder={onOpenFolder} />
+          )}
         </Panel>
 
+        {/* 右栏两块面板等分高度，内容多时各自滚动 */}
         <div className="flex min-h-0 flex-col gap-4">
-          <Panel title="待办" meta={openTasks.length > 0 ? `${openTasks.length} 项` : undefined} className="shrink-0">
+          <Panel
+            title="需要处理"
+            meta={openTasks.length > 0 ? `${openTasks.length} 项` : undefined}
+            className="flex-1"
+            bodyClassName="overflow-auto"
+          >
             {openTasks.length === 0 ? (
               <div className="flex items-center gap-4 p-4">
                 <Lighthouse className="h-14 w-auto shrink-0" />
-                <div>
+                <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">一切正常</p>
                   <p className="text-xs text-muted-foreground">没有失效、重复或待确认的书签。</p>
                 </div>
+                <Button size="sm" variant="outline" className="shrink-0" onClick={() => onNavigate('scan')}>
+                  再扫描一遍
+                </Button>
               </div>
             ) : (
-              <ul className="divide-y">
+              <ul className="flex h-full flex-col divide-y">
                 {openTasks.map((t) => (
-                  <li key={t.target}>
-                    <button
-                      type="button"
-                      onClick={() => onNavigate(t.target)}
-                      className="flex w-full items-center gap-3 px-4 py-2.5 text-left outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-                    >
-                      <t.icon className="size-4 shrink-0 text-muted-foreground" />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium tabular-nums">{t.phrase}</span>
-                        <span className="block truncate text-xs text-muted-foreground">{t.hint}</span>
-                      </span>
-                      <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-                    </button>
+                  // 待办少时行不无限拉高，停在上方
+                  <li key={t.target} className="flex max-h-14 min-h-11 flex-1 items-center gap-3 px-4 py-1.5">
+                    <t.icon className="size-4 shrink-0 text-muted-foreground" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium tabular-nums">{t.phrase}</span>
+                      <span className="block truncate text-xs text-muted-foreground">{t.hint}</span>
+                    </span>
+                    <Button size="sm" variant="outline" className="shrink-0" onClick={() => onNavigate(t.target)}>
+                      {t.action}
+                    </Button>
                   </li>
                 ))}
               </ul>
@@ -233,10 +267,10 @@ export function Overview({ index, roots, barId, onNavigate, onOpenFolder }: Prop
 
           <Panel title="常去的网站" meta="按收藏数量" className="flex-1" bodyClassName="overflow-auto">
             {domains.length > 0 ? (
-              <ol className="divide-y">
+              <ol className="flex h-full flex-col divide-y">
                 {domains.map((d) => (
-                  <li key={d.domain} className="flex items-center gap-3 px-4 py-2">
-                    <Favicon url={`https://${d.domain}/`} name={d.domain} className="size-5 rounded" />
+                  <li key={d.domain} className="flex min-h-5.5 flex-1 items-center gap-2.5 px-4">
+                    <Favicon url={`https://${d.domain}/`} name={d.domain} className="size-4.5 rounded" />
                     <span className="min-w-0 flex-1 truncate text-sm">{d.domain}</span>
                     <span className="text-xs text-muted-foreground tabular-nums">{formatCount(d.count)}</span>
                   </li>
