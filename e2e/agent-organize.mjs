@@ -92,9 +92,12 @@ try {
 
   const otherId = await page.evaluate(async (baseUrl) => {
     await chrome.storage.local.set({ aiConfig: { baseUrl, apiKey: 'sk-test', model: 'mock', privacy: 'title_domain' } });
-    for (const [title, url] of [['React 文档', 'https://react.dev/'], ['Vue 指南', 'https://vuejs.org/guide/'], ['Go 教程', 'https://go.dev/tour/'], ['Rust 教程', 'https://doc.rust-lang.org/book/']]) {
+    for (const [title, url] of [['React 文档', 'https://react.dev/'], ['Vue 指南', 'https://vuejs.org/guide/'], ['Go 教程', 'https://go.dev/tour/']]) {
       await chrome.bookmarks.create({ parentId: '2', title, url });
     }
+    // 书签全被移走后应自动删除、撤销后应恢复的旧目录
+    const old = await chrome.bookmarks.create({ parentId: '2', title: '旧目录' });
+    await chrome.bookmarks.create({ parentId: old.id, title: 'Rust 教程', url: 'https://doc.rust-lang.org/book/' });
     return '2';
   }, `http://${AI_HOST}:${port}/v1`);
   await page.reload();
@@ -114,11 +117,12 @@ try {
     const find = (node, title) => node.children?.find((c) => c.title === title);
     const docs = find(bar, '文档');
     const titles = (node) => (node?.children ?? []).map((c) => c.title).sort();
-    return { frontend: titles(find(docs ?? {}, '前端')), tutorials: titles(find(bar, '教程')) };
+    const left = (await chrome.bookmarks.getChildren('2')).map((c) => c.title);
+    return { frontend: titles(find(docs ?? {}, '前端')), tutorials: titles(find(bar, '教程')), left };
   });
-  if (JSON.stringify(after) !== JSON.stringify({ frontend: ['React 文档', 'Vue 指南'], tutorials: ['Go 教程', 'Rust 教程'] })) {
+  if (JSON.stringify(after) !== JSON.stringify({ frontend: ['React 文档', 'Vue 指南'], tutorials: ['Go 教程', 'Rust 教程'], left: [] })) {
     fail(`整理结果不对：${JSON.stringify(after)}`);
-  } else console.log('PASS: 书签已按体系移动');
+  } else console.log('PASS: 书签已按体系移动，移空的旧目录已删除');
 
   await page.getByRole('button', { name: '操作记录' }).click();
   await page.getByRole('button', { name: '撤销' }).first().click();
@@ -127,10 +131,12 @@ try {
   const restored = await page.evaluate(async (id) => {
     const back = (await chrome.bookmarks.getChildren(id)).map((c) => c.title).sort();
     const barFolders = (await chrome.bookmarks.getChildren('1')).filter((c) => !c.url).map((c) => c.title);
-    return { back, barFolders };
+    const old = (await chrome.bookmarks.getChildren(id)).find((c) => c.title === '旧目录');
+    const oldChildren = old ? (await chrome.bookmarks.getChildren(old.id)).map((c) => c.title) : [];
+    return { back, barFolders, oldChildren };
   }, otherId);
-  if (restored.back.length !== 4 || restored.barFolders.length !== 0) fail(`撤销后未恢复：${JSON.stringify(restored)}`);
-  else console.log('PASS: 撤销后书签回到原处，新建目录已删除');
+  if (restored.back.length !== 4 || restored.barFolders.length !== 0 || restored.oldChildren.join() !== 'Rust 教程') fail(`撤销后未恢复：${JSON.stringify(restored)}`);
+  else console.log('PASS: 撤销后书签和旧目录回到原处，新建目录已删除');
 } finally {
   await ctx.close();
   server.close();

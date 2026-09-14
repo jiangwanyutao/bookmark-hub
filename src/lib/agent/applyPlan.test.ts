@@ -52,3 +52,51 @@ describe('planToIntents', () => {
     expect(() => planToIntents({ ...plan({}), scope: null }, roots, inScope)).toThrow('请先确认整理范围');
   });
 });
+
+describe('planToIntents removes folders left empty', () => {
+  const tree: TreeNode[] = [
+    {
+      id: '0',
+      title: '',
+      children: [
+        {
+          id: '1',
+          title: '书签栏',
+          children: [
+            { id: '20', title: '旧前端', children: [bm('x'), { id: '21', title: '子目录', children: [bm('y')] }, { id: '22', title: '空目录', children: [] }] },
+            { id: '30', title: '杂物', children: [bm('keep'), bm('z')] },
+            { id: '40', title: '教程', children: [] },
+          ],
+        },
+        { id: '2', title: '其他书签', children: [] },
+      ],
+    },
+  ];
+  const all = () => true;
+  const scoped = (folderIds: string[], assignments: Record<string, string>, rootFolderId = '1'): OrganizePlan => ({
+    scope: { folderIds, rootFolderId },
+    categories: ['教程'],
+    assignments,
+  });
+
+  it('removes only the topmost emptied folder, after all moves, keeping target folders and folders with bookmarks left', () => {
+    const result = planToIntents(scoped(['20', '30', '40'], { x: '教程', y: '教程', z: '教程' }), tree, all);
+    expect(result.intents).toEqual([
+      { type: 'move', id: 'x', parentId: '40' },
+      { type: 'move', id: 'y', parentId: '40' },
+      { type: 'move', id: 'z', parentId: '40' },
+      { type: 'remove', id: '20' },
+    ]);
+    expect(result.removedFolders).toBe(1);
+  });
+
+  it('never removes built-in folders or the folder the new taxonomy is built in', () => {
+    const result = planToIntents(scoped(['1'], { x: '教程', y: '教程', z: '教程', keep: '教程' }, '20'), tree, all);
+    expect(result.intents.filter((i) => i.type === 'remove')).toEqual([
+      { type: 'remove', id: '21' },
+      { type: 'remove', id: '22' },
+      { type: 'remove', id: '30' },
+      { type: 'remove', id: '40' },
+    ]);
+  });
+});
