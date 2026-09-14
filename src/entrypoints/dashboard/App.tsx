@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity,
   CircleHelp,
@@ -77,6 +77,8 @@ const NAV_GROUPS = [
   },
 ] as const;
 
+const IS_MAC = /Mac/.test(navigator.platform);
+
 export function App() {
   const { tree, error } = useBookmarkTree();
   const index = useMemo(() => (tree ? buildIndex(tree) : null), [tree]);
@@ -85,6 +87,22 @@ export function App() {
   const [view, setView] = useState<View>('overview');
   const [query, setQuery] = useState('');
   const [folderId, setFolderId] = useState<string | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  // ⌘/Ctrl+K 随处聚焦搜索；不在输入框里时 / 也可以
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const typing = target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName);
+      if (((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') || (e.key === '/' && !typing)) {
+        e.preventDefault();
+        searchRef.current?.focus();
+        searchRef.current?.select();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   // 侧栏上待处理的数量
   const badges = useMemo((): Partial<Record<View, number>> => {
@@ -102,36 +120,49 @@ export function App() {
   if (!tree || !index) return <p className="p-10 text-sm text-muted-foreground">正在读取书签…</p>;
 
   return (
-    <div className="grid h-screen grid-cols-[232px_minmax(0,1fr)] grid-rows-[56px_minmax(0,1fr)] bg-background">
-      <header className="col-span-2 flex items-center gap-4 border-b bg-sidebar px-4">
-        <span className="flex w-[200px] shrink-0 items-center gap-2.5 text-[15px] font-semibold tracking-tight">
+    // 视口低于 xl（1280px）时侧栏收成图标栏
+    <div className="grid h-screen grid-cols-[56px_minmax(0,1fr)] grid-rows-[56px_minmax(0,1fr)] bg-background xl:grid-cols-[232px_minmax(0,1fr)]">
+      <header className="col-span-2 flex items-center gap-4 border-b bg-sidebar px-3.5 xl:px-4">
+        <span className="flex shrink-0 items-center gap-2.5 text-[15px] font-semibold tracking-tight xl:w-[200px]">
           <img src="/icon-48.png" alt="" className="size-7 rounded-md" />
-          Bookmark Hub
+          <span className="sr-only xl:not-sr-only">Bookmark Hub</span>
         </span>
         <div className="relative w-full max-w-md">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          {/* 在「全部书签」里边打边筛；在其他页面回车才跳过去，免得打字就丢掉当前页面的进度 */}
           <Input
+            ref={searchRef}
             id="search"
             type="search"
             aria-label="搜索书签"
-            placeholder="搜索标题、网址、目录…"
+            aria-keyshortcuts={IS_MAC ? 'Meta+K /' : 'Control+K /'}
+            placeholder={view === 'bookmarks' ? '搜索标题、网址、目录…' : '搜索标题、网址、目录，回车查看…'}
             className="h-9 rounded-md bg-card pl-9"
             value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setView('bookmarks');
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') setView('bookmarks');
+              if (e.key === 'Escape') {
+                setQuery('');
+                e.currentTarget.blur();
+              }
             }}
           />
+          {!query && (
+            <kbd className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded border bg-muted px-1.5 font-mono text-xs text-muted-foreground">
+              {IS_MAC ? '⌘K' : 'Ctrl K'}
+            </kbd>
+          )}
         </div>
         <div className="ml-auto">
           <ThemeToggle />
         </div>
       </header>
 
-      <nav aria-label="主导航" className="flex flex-col gap-5 overflow-auto border-r bg-sidebar px-3 py-4">
+      <nav aria-label="主导航" className="flex flex-col gap-3 overflow-auto border-r bg-sidebar px-2 py-4 xl:gap-5 xl:px-3">
         {NAV_GROUPS.map((group) => (
           <div key={group.label} className="flex flex-col gap-0.5">
-            <p className="px-3 pb-1.5 text-xs font-medium text-muted-foreground">{group.label}</p>
+            <p className="sr-only px-3 pb-1.5 text-xs font-medium text-muted-foreground xl:not-sr-only">{group.label}</p>
             {group.items.map(({ view: target, label, icon: Icon }) => {
               const active = view === target;
               const count = badges[target] ?? 0;
@@ -139,19 +170,25 @@ export function App() {
                 <Button
                   key={target}
                   variant="ghost"
-                  className={
+                  title={label}
+                  className={cn(
+                    'relative h-9 justify-center gap-2.5 px-0 xl:justify-start xl:px-3',
                     active
-                      ? 'h-9 justify-start gap-2.5 bg-accent font-medium text-accent-foreground hover:bg-accent hover:text-accent-foreground'
-                      : 'h-9 justify-start gap-2.5 font-normal text-muted-foreground hover:bg-card hover:text-foreground'
-                  }
+                      ? 'bg-accent font-medium text-accent-foreground hover:bg-accent hover:text-accent-foreground'
+                      : 'font-normal text-muted-foreground hover:bg-card hover:text-foreground',
+                  )}
                   onClick={() => setView(target)}
                 >
                   <Icon />
-                  {label}
+                  <span className="sr-only xl:not-sr-only">{label}</span>
                   {count > 0 && (
-                    <span className={cn('ml-auto text-xs tabular-nums', active ? 'text-accent-foreground' : 'text-muted-foreground')}>
-                      {count.toLocaleString('zh-CN')}
-                    </span>
+                    <>
+                      <span className={cn('ml-auto hidden text-xs tabular-nums xl:inline', active ? 'text-accent-foreground' : 'text-muted-foreground')}>
+                        {count.toLocaleString('zh-CN')}
+                      </span>
+                      {/* 图标栏里放不下数字，用小圆点提示有待处理 */}
+                      <span aria-hidden className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-primary xl:hidden" />
+                    </>
                   )}
                 </Button>
               );
@@ -175,7 +212,14 @@ export function App() {
         )}
         {view === 'launcher' && <LauncherView roots={tree} index={index} />}
         {view === 'bookmarks' && (
-          <BookmarksView roots={tree} index={index} query={query} folderId={folderId} onSelectFolder={setFolderId} />
+          <BookmarksView
+            roots={tree}
+            index={index}
+            query={query}
+            folderId={folderId}
+            onSelectFolder={setFolderId}
+            onClearQuery={() => setQuery('')}
+          />
         )}
         {view === 'organize' && <AgentOrganizeView index={index} roots={tree} onOpenSettings={() => setView('settings')} />}
         {view === 'scan' && <ScanView bookmarks={index.bookmarks} />}

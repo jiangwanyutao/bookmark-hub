@@ -90,7 +90,8 @@ export function IssuesView({ kind, bookmarks }: { kind: IssueKind; bookmarks: Bo
     setPicked(next);
   };
 
-  async function withBusy(work: () => Promise<void>) {
+  // 行内单条操作不重置勾选，免得打乱正在挑的批量选择
+  async function withBusy(work: () => Promise<void>, resetSelection = true) {
     setBusy(true);
     try {
       await work();
@@ -98,12 +99,12 @@ export function IssuesView({ kind, bookmarks }: { kind: IssueKind; bookmarks: Bo
       toast.error(`操作失败：${errorMessage(e)}`);
     } finally {
       setBusy(false);
-      setPicked(null);
+      if (resetSelection) setPicked(null);
       await reload();
     }
   }
 
-  async function recheck(issues: BookmarkIssue[]) {
+  async function recheck(issues: BookmarkIssue[], resetSelection = true) {
     // 授权须在点击后第一时间请求
     const access = await ensureScanAccess();
     if (access !== 'granted') {
@@ -115,15 +116,15 @@ export function IssuesView({ kind, bookmarks }: { kind: IssueKind; bookmarks: Bo
       const outcome = await recheckUrls(browserScanDeps(db), uniqueUrls(issues));
       if (outcome === 'offline') toast.error('网络不可用，请恢复网络后再试。');
       else toast.success(`已重新检测 ${issues.length} 个书签`);
-    });
+    }, resetSelection);
   }
 
-  const ignore = (issues: BookmarkIssue[], on: boolean) =>
+  const ignore = (issues: BookmarkIssue[], on: boolean, resetSelection = true) =>
     withBusy(async () => {
       const { db } = await getHubCtx();
       await setIgnored(db, uniqueUrls(issues), on, Date.now());
       toast.success(on ? `已忽略 ${issues.length} 条` : `已取消忽略 ${issues.length} 条`);
-    });
+    }, resetSelection);
 
   const markVpn = (issues: BookmarkIssue[]) =>
     withBusy(async () => {
@@ -271,6 +272,9 @@ export function IssuesView({ kind, bookmarks }: { kind: IssueKind; bookmarks: Bo
                 tone={config.tone}
                 checked={selection.has(issue.bookmark.id)}
                 onCheckedChange={(on) => toggle(issue.bookmark.id, on)}
+                busy={busy}
+                onRecheck={() => void recheck([issue], false)}
+                onIgnore={() => void ignore([issue], true, false)}
               />
             ))}
           </ul>
@@ -321,16 +325,23 @@ function IssueRow({
   tone,
   checked,
   onCheckedChange,
+  busy,
+  onRecheck,
+  onIgnore,
 }: {
   issue: BookmarkIssue;
   tone: PillTone;
   checked: boolean;
   onCheckedChange: (on: boolean) => void;
+  busy: boolean;
+  onRecheck: () => void;
+  onIgnore: () => void;
 }) {
   const { bookmark, result } = issue;
   const id = `issue-${bookmark.id}`;
+  const name = bookmark.title || bookmark.url;
   return (
-    <li className="flex items-start gap-3 px-4 py-3 hover:bg-muted/40">
+    <li className="group flex items-start gap-3 px-4 py-3 hover:bg-muted/40">
       <Checkbox id={id} className="mt-1" checked={checked} onCheckedChange={(on) => onCheckedChange(on === true)} />
       <Favicon key={bookmark.id} url={bookmark.url} name={bookmark.title || bookmark.url} className="mt-0.5 size-5 rounded" />
       <label htmlFor={id} className="min-w-0 flex-1 cursor-pointer space-y-0.5">
@@ -348,8 +359,17 @@ function IssueRow({
           <span>· {new Date(result.checkedAt).toLocaleString('zh-CN')} 检测</span>
         </span>
       </label>
+      {/* 单条操作：悬停或键盘聚焦到这一行时出现 */}
+      <div className="flex shrink-0 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+        <Button size="icon" variant="ghost" disabled={busy} aria-label={`重新检测 ${name}`} title="重新检测" onClick={onRecheck}>
+          <RefreshCw />
+        </Button>
+        <Button size="icon" variant="ghost" disabled={busy} aria-label={`忽略 ${name}`} title="忽略" onClick={onIgnore}>
+          <EyeOff />
+        </Button>
+      </div>
       <Button asChild size="icon" variant="ghost" className="shrink-0">
-        <a href={bookmark.url} target="_blank" rel="noreferrer" aria-label={`打开 ${bookmark.title || bookmark.url}`}>
+        <a href={bookmark.url} target="_blank" rel="noreferrer" aria-label={`打开 ${name}`} title="打开">
           <ExternalLink />
         </a>
       </Button>

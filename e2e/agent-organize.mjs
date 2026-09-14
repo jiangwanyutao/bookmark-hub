@@ -138,8 +138,15 @@ try {
   if (restored.back.length !== 4 || restored.barFolders.length !== 0 || restored.oldChildren.join() !== 'Rust 教程') fail(`撤销后未恢复：${JSON.stringify(restored)}`);
   else console.log('PASS: 撤销后书签和旧目录回到原处，新建目录已删除');
 } finally {
-  await ctx.close();
+  // 关闭 persistent context 在 Windows 上偶尔挂住，限时 5 秒
+  await Promise.race([ctx.close().catch(() => {}), new Promise((r) => setTimeout(r, 5000))]);
+  // 浏览器留下的 keep-alive 连接会让 close() 一直等，先断开
+  server.closeAllConnections();
   server.close();
   fs.rmSync(extDir, { recursive: true, force: true });
-  fs.rmSync(userDataDir, { recursive: true, force: true });
+  // 浏览器没退干净时用户目录可能被占用，留在临时目录即可
+  try {
+    fs.rmSync(userDataDir, { recursive: true, force: true });
+  } catch {}
 }
+process.exit(process.exitCode ?? 0);

@@ -8,7 +8,8 @@ export function PageHeader({ title, subtitle, actions }: { title: ReactNode; sub
         <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
         {subtitle && <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      {/* ml-auto：窄屏换行后操作仍靠右 */}
+      {actions && <div className="ml-auto flex flex-wrap items-center gap-2">{actions}</div>}
     </header>
   );
 }

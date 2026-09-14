@@ -48,7 +48,8 @@ export function BookmarkDetail({ bookmark, folders, tags, onSaveTags }: Props) {
           <p className="truncate text-xs text-muted-foreground">{bookmark.domain || '—'}</p>
         </div>
       </div>
-      <BookmarkActions key={bookmark.id} bookmark={bookmark} folders={folders} />
+      {/* 同级 key 不能重复，否则快速切换书签时会残留旧节点 */}
+      <BookmarkActions key={`actions-${bookmark.id}`} bookmark={bookmark} folders={folders} />
       <Separator className="my-5" />
       <dl className="space-y-3 text-sm">
         {fields.map((f) => (
@@ -59,7 +60,7 @@ export function BookmarkDetail({ bookmark, folders, tags, onSaveTags }: Props) {
         ))}
       </dl>
       <Separator className="my-5" />
-      <TagEditor key={bookmark.id} tags={tags} onSave={onSaveTags} />
+      <TagEditor key={`tags-${bookmark.id}`} tags={tags} onSave={onSaveTags} />
     </aside>
   );
 }
