@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { CircleCheck, EyeOff, ExternalLink, Globe, RefreshCw, Trash2, Wand2 } from 'lucide-react';
+import { ChevronRight, CircleCheck, EyeOff, ExternalLink, Globe, RefreshCw, Trash2, Wand2 } from 'lucide-react';
 import type { Bookmark } from '@/lib/bookmarks';
 import { hostOf, type FailReason } from '@/lib/scan/classify';
 import { collectIssues, FAIL_REASON_LABEL, type Issue, type IssueKind } from '@/lib/scan/issues';
@@ -24,32 +24,35 @@ import {
 import { cn } from '@/lib/utils';
 import { Lighthouse } from './brand/Lighthouse';
 import { Favicon } from './Favicon';
+import { PageHeader } from './PageHeader';
+import { Panel } from './Panel';
+import { Pill, type PillTone } from './Pill';
 
 type BookmarkIssue = Issue<Bookmark>;
 
 const CONFIG: Record<
   IssueKind,
-  { title: string; description: string; empty: string; chip: string; defaultSelect: (i: BookmarkIssue) => boolean }
+  { title: string; description: string; empty: string; tone: PillTone; defaultSelect: (i: BookmarkIssue) => boolean }
 > = {
   broken: {
     title: '失效链接',
     description: '「域名无法解析」可能是公司内网或需要 VPN 的网站，默认不勾选，连上后可以重新检测。',
     empty: '没有失效链接。',
-    chip: 'bg-coral text-coral-foreground',
+    tone: 'danger',
     defaultSelect: (i) => i.result.failReason === 'not_found',
   },
   redirected: {
     title: '重定向链接',
     description: '这些网址已永久迁移到新地址。更新后可以在「操作记录」里撤销。',
     empty: '没有需要更新的网址。',
-    chip: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200',
+    tone: 'warn',
     defaultSelect: () => true,
   },
   pending: {
     title: '待确认',
-    description: '这些链接没能确定状态：可能需要登录、被限流、网站暂时故障，或需要 VPN。连上 VPN 或登录后可以重新检测。',
+    description: '可能需要登录、被限流、网站暂时故障，或需要 VPN。连上 VPN 或登录后可以重新检测。',
     empty: '没有待确认的链接。',
-    chip: 'bg-muted text-muted-foreground',
+    tone: 'neutral',
     defaultSelect: () => false,
   },
 };
@@ -127,9 +130,7 @@ export function IssuesView({ kind, bookmarks }: { kind: IssueKind; bookmarks: Bo
       const { db } = await getHubCtx();
       const hosts = [...new Set(issues.map((i) => hostOf(i.bookmark.url)))];
       const moved = await addVpnHosts(db, hosts, Date.now());
-      toast.success(
-        `已将 ${hosts.length} 个网站标记为需要 VPN${moved > 0 ? `，${moved} 条结果已移到「待确认」` : ''}`,
-      );
+      toast.success(`已将 ${hosts.length} 个网站标记为需要 VPN${moved > 0 ? `，${moved} 条结果已移到「待确认」` : ''}`);
     });
 
   const remove = (issues: BookmarkIssue[]) =>
@@ -161,8 +162,8 @@ export function IssuesView({ kind, bookmarks }: { kind: IssueKind; bookmarks: Bo
 
   if (results.size === 0) {
     return (
-      <div className="flex min-h-full flex-col items-center justify-center gap-4 p-8 text-center">
-        <Lighthouse className="h-28 w-auto" />
+      <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
+        <Lighthouse className="h-24 w-auto" />
         <div className="space-y-1">
           <p className="font-medium">还没有扫描过</p>
           <p className="max-w-xs text-sm text-muted-foreground">去「健康扫描」开始第一次扫描，结果会显示在这里。</p>
@@ -171,61 +172,56 @@ export function IssuesView({ kind, bookmarks }: { kind: IssueKind; bookmarks: Bo
     );
   }
 
-  const filterClass = (active: boolean) =>
+  // 分段控件：选中段用主色实底
+  const segment = (isActive: boolean) =>
     cn(
-      'rounded-md px-3 py-1.5 text-sm outline-none hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring',
-      active && 'bg-accent font-medium text-accent-foreground',
+      'rounded-md px-3 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring',
+      isActive ? 'bg-primary font-medium text-primary-foreground' : 'text-muted-foreground hover:text-foreground',
     );
 
-  return (
-    <section className="mx-auto max-w-4xl p-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {config.title}
-          <span className="ml-2 text-base font-normal text-muted-foreground tabular-nums">{active.length}</span>
-        </h1>
-        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{config.description}</p>
-      </div>
-
-      {kind === 'pending' && reasonCounts.size > 1 && (
-        <div className="mt-6 flex flex-wrap gap-1" role="group" aria-label="按原因筛选">
+  const filter =
+    kind === 'pending' && reasonCounts.size > 1 ? (
+      <div className="inline-flex rounded-lg bg-muted p-0.5" role="group" aria-label="按原因筛选">
+        <button
+          type="button"
+          aria-pressed={reasonFilter === 'all'}
+          className={segment(reasonFilter === 'all')}
+          onClick={() => {
+            setReasonFilter('all');
+            setPicked(null);
+          }}
+        >
+          全部 <span className="tabular-nums">{active.length}</span>
+        </button>
+        {[...reasonCounts].map(([reason, count]) => (
           <button
+            key={reason}
             type="button"
-            aria-pressed={reasonFilter === 'all'}
-            className={filterClass(reasonFilter === 'all')}
+            aria-pressed={reasonFilter === reason}
+            className={segment(reasonFilter === reason)}
             onClick={() => {
-              setReasonFilter('all');
+              setReasonFilter(reason);
               setPicked(null);
             }}
           >
-            全部 <span className="tabular-nums">{active.length}</span>
+            {FAIL_REASON_LABEL[reason]} <span className="tabular-nums">{count}</span>
           </button>
-          {[...reasonCounts].map(([reason, count]) => (
-            <button
-              key={reason}
-              type="button"
-              aria-pressed={reasonFilter === reason}
-              className={filterClass(reasonFilter === reason)}
-              onClick={() => {
-                setReasonFilter(reason);
-                setPicked(null);
-              }}
-            >
-              {FAIL_REASON_LABEL[reason]} <span className="tabular-nums">{count}</span>
-            </button>
-          ))}
-        </div>
-      )}
+        ))}
+      </div>
+    ) : undefined;
+
+  return (
+    <div className="flex h-full min-h-[560px] flex-col gap-4 px-6 py-5">
+      <PageHeader title={`${config.title} ${active.length}`} subtitle={config.description} actions={filter} />
 
       {shown.length === 0 ? (
-        <p className="mt-6 flex items-center gap-3 rounded-xl border bg-card p-5 text-sm">
+        <Panel className="shrink-0" bodyClassName="flex items-center gap-3 p-5 text-sm">
           <CircleCheck className="size-5 shrink-0 text-primary" />
           {config.empty}
-        </p>
+        </Panel>
       ) : (
-        <div className="mt-6 rounded-xl border bg-card">
-          {/* 批量操作栏滚动时贴在列表顶部 */}
-          <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 rounded-t-xl border-b bg-card px-4 py-2.5">
+        <Panel className="flex-1" bodyClassName="flex flex-col">
+          <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-2">
             <Checkbox
               id={`select-all-${kind}`}
               aria-label="全选"
@@ -266,24 +262,28 @@ export function IssuesView({ kind, bookmarks }: { kind: IssueKind; bookmarks: Bo
               </Button>
             )}
           </div>
-          <ul className="divide-y">
+          {/* 列表只在面板内滚动，操作栏始终可见 */}
+          <ul className="min-h-0 flex-1 divide-y overflow-auto">
             {shown.map((issue) => (
               <IssueRow
                 key={issue.bookmark.id}
                 issue={issue}
-                chip={config.chip}
+                tone={config.tone}
                 checked={selection.has(issue.bookmark.id)}
                 onCheckedChange={(on) => toggle(issue.bookmark.id, on)}
               />
             ))}
           </ul>
-        </div>
+        </Panel>
       )}
 
       {ignoredIssues.length > 0 && (
-        <details className="mt-6 rounded-xl border bg-card px-4 py-3 text-sm">
-          <summary className="cursor-pointer text-muted-foreground">已忽略 {ignoredIssues.length} 条</summary>
-          <ul className="mt-2 divide-y">
+        <details className="group shrink-0 rounded-xl border bg-card px-4 py-2.5 text-sm shadow-card">
+          <summary className="flex items-center gap-1.5 text-muted-foreground">
+            <ChevronRight className="size-4 transition-transform group-open:rotate-90" />
+            已忽略 {ignoredIssues.length} 条
+          </summary>
+          <ul className="mt-2 max-h-40 divide-y overflow-auto">
             {ignoredIssues.map((issue) => (
               <li key={issue.bookmark.id} className="flex items-center justify-between gap-4 py-2">
                 <span className="min-w-0 truncate">{issue.bookmark.title || issue.bookmark.url}</span>
@@ -312,18 +312,18 @@ export function IssuesView({ kind, bookmarks }: { kind: IssueKind; bookmarks: Bo
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </section>
+    </div>
   );
 }
 
 function IssueRow({
   issue,
-  chip,
+  tone,
   checked,
   onCheckedChange,
 }: {
   issue: BookmarkIssue;
-  chip: string;
+  tone: PillTone;
   checked: boolean;
   onCheckedChange: (on: boolean) => void;
 }) {
@@ -339,10 +339,10 @@ function IssueRow({
         {result.redirectTo && <span className="block text-xs break-all text-primary">→ {result.redirectTo}</span>}
         <span className="flex flex-wrap items-center gap-2 pt-1 text-xs text-muted-foreground">
           {result.failReason && (
-            <span className={cn('rounded-md px-1.5 py-0.5 font-medium', chip)}>
+            <Pill tone={tone}>
               {FAIL_REASON_LABEL[result.failReason]}
               {result.httpStatus ? `（${result.httpStatus}）` : ''}
-            </span>
+            </Pill>
           )}
           <span>{bookmark.folderPath}</span>
           <span>· {new Date(result.checkedAt).toLocaleString('zh-CN')} 检测</span>

@@ -18,6 +18,9 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import { PageHeader } from './PageHeader';
+import { Panel } from './Panel';
+import { Pill } from './Pill';
 
 const ACTION_LABEL: Record<Op['action'], string> = {
   REMOVE: '删除',
@@ -83,80 +86,75 @@ export function HistoryView() {
   const nothingToRestore = diff ? diff.missing.length + diff.moved.length + diff.changed.length === 0 : true;
 
   return (
-    <section className="mx-auto max-w-3xl p-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">操作记录</h1>
-        <p className="mt-1 text-sm text-muted-foreground">每次批量改动都记在这里，可以单独撤销。撤销时会跳过你之后在浏览器里手动改过的书签。</p>
-      </div>
+    <div className="flex h-full min-h-[560px] flex-col gap-4 px-6 py-5">
+      <PageHeader title="操作记录" subtitle="每次批量改动都记在这里，可以单独撤销。撤销时会跳过你之后在浏览器里手动改过的书签。" />
 
-      {error && <p className="mt-6 text-sm text-destructive">读取操作记录失败：{error}</p>}
-      {batches?.length === 0 && (
-        <p className="mt-6 text-sm text-muted-foreground">还没有操作记录。编辑、移动、删除书签后会出现在这里。</p>
-      )}
+      {/* 左右两块等高：操作时间线 + 恢复点，各自在面板内滚动 */}
+      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_24rem]">
+        <Panel title="批量操作" meta={batches ? `${batches.length} 次` : undefined} bodyClassName="overflow-auto">
+          {error && <p className="p-4 text-sm text-destructive">读取操作记录失败：{error}</p>}
+          {batches?.length === 0 && <p className="p-4 text-sm text-muted-foreground">还没有操作记录。编辑、移动、删除书签后会出现在这里。</p>}
+          {batches && batches.length > 0 && (
+            // 时间线：圆点表示一次批量操作，已撤销的变灰
+            <ol className="mx-5 my-3 border-l">
+              {batches.map((b) => {
+                const undone = b.undoneAt !== null;
+                return (
+                  <li key={b.id} className="relative flex items-center justify-between gap-4 py-2.5 pl-5">
+                    <span
+                      aria-hidden
+                      className={cn(
+                        'absolute top-1/2 -left-[5px] size-2.5 -translate-y-1/2 rounded-full ring-4 ring-card',
+                        undone ? 'bg-muted-foreground/40' : 'bg-primary',
+                      )}
+                    />
+                    <div className="min-w-0">
+                      <p className={cn('text-sm font-medium', undone && 'text-muted-foreground')}>{b.label}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatTime(b.createdAt)} · {summarize(b)}
+                        {b.snapshotId && ' · 已创建恢复点'}
+                      </p>
+                    </div>
+                    {undone ? (
+                      <Pill>已撤销</Pill>
+                    ) : (
+                      <Button variant="outline" size="sm" className="shrink-0" onClick={() => void handleUndo(b.id)}>
+                        <Undo2 />
+                        撤销
+                      </Button>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </Panel>
 
-      {batches && batches.length > 0 && (
-        // 时间线：圆点表示一次批量操作，已撤销的变灰
-        <ol className="mt-8 ml-1.5 border-l">
-          {batches.map((b) => {
-            const undone = b.undoneAt !== null;
-            return (
-              <li key={b.id} className="relative flex items-center justify-between gap-4 py-3 pl-6">
-                <span
-                  aria-hidden
-                  className={cn(
-                    'absolute top-1/2 -left-[5px] size-2.5 -translate-y-1/2 rounded-full ring-4 ring-background',
-                    undone ? 'bg-muted-foreground/40' : 'bg-primary',
-                  )}
-                />
-                <div className="min-w-0">
-                  <p className={cn('font-medium', undone && 'text-muted-foreground')}>{b.label}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatTime(b.createdAt)} · {summarize(b)}
-                    {b.snapshotId && ' · 已创建恢复点'}
-                  </p>
-                </div>
-                {undone ? (
-                  <span className="shrink-0 rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">已撤销</span>
-                ) : (
-                  <Button variant="outline" size="sm" className="shrink-0" onClick={() => void handleUndo(b.id)}>
-                    <Undo2 />
-                    撤销
-                  </Button>
-                )}
-              </li>
-            );
-          })}
-        </ol>
-      )}
-
-      <div className="mt-12 border-t pt-8">
-        <h2 className="text-lg font-semibold tracking-tight">恢复点</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          批量操作前自动创建，保留最近 20 份及 30 天内的全部。恢复会先展示差异，不会删除之后新增的书签，恢复本身也可以撤销。
-        </p>
-
-        {snapshots.length === 0 ? (
-          <p className="mt-4 text-sm text-muted-foreground">还没有恢复点。第一次批量删除、移动或整理时会自动创建。</p>
-        ) : (
-          <ul className="mt-5 divide-y rounded-xl border bg-card">
-            {snapshots.map((s) => (
-              <li key={s.id} className="flex items-center justify-between gap-4 px-4 py-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                    <ArchiveRestore className="size-4" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="font-medium tabular-nums">{formatTime(s.createdAt)}</p>
-                    <p className="text-xs text-muted-foreground">当时有 {s.bookmarkCount.toLocaleString('zh-CN')} 个书签</p>
+        <Panel title="恢复点" meta={`${snapshots.length} 份`} bodyClassName="flex flex-col">
+          <p className="shrink-0 border-b px-4 py-2.5 text-xs text-muted-foreground">
+            批量操作前自动创建，保留最近 20 份及 30 天内的全部。恢复前先展示差异，不会删除之后新增的书签。
+          </p>
+          {snapshots.length === 0 ? (
+            <p className="p-4 text-sm text-muted-foreground">还没有恢复点。第一次批量删除、移动或整理时会自动创建。</p>
+          ) : (
+            <ul className="min-h-0 flex-1 divide-y overflow-auto">
+              {snapshots.map((s) => (
+                <li key={s.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <ArchiveRestore className="size-4 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium tabular-nums">{formatTime(s.createdAt)}</p>
+                      <p className="text-xs text-muted-foreground">当时有 {s.bookmarkCount.toLocaleString('zh-CN')} 个书签</p>
+                    </div>
                   </div>
-                </div>
-                <Button variant="outline" size="sm" className="shrink-0" onClick={() => void openPreview(s)}>
-                  对比并恢复
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
+                  <Button variant="outline" size="sm" className="shrink-0" onClick={() => void openPreview(s)}>
+                    对比并恢复
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
       </div>
 
       <AlertDialog open={preview !== null} onOpenChange={(open) => !open && setPreview(null)}>
@@ -190,6 +188,6 @@ export function HistoryView() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </section>
+    </div>
   );
 }

@@ -9,9 +9,10 @@ import { PRIVACY_LABEL } from '@/lib/ai/prompt';
 import { skipReason } from '@/lib/scan/rules';
 import { useOrganizeAgent } from '@/hooks/useOrganizeAgent';
 import { useTags } from '@/hooks/useTags';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AiTagsCard } from './AiTagsCard';
+import { PageHeader } from './PageHeader';
+import { Pill } from './Pill';
 import { ChatPanel } from './agent/ChatPanel';
 import { PlanPanel } from './agent/PlanPanel';
 import { PlanPreviewDialog } from './agent/PlanPreviewDialog';
@@ -65,42 +66,42 @@ export function AgentOrganizeView({ index, roots, onOpenSettings }: Props) {
   if (config === undefined) return null;
   if (!config) {
     return (
-      <section className="flex min-h-full items-center justify-center p-8">
+      <div className="flex h-full items-center justify-center p-8">
         <div className="flex max-w-md flex-col items-center gap-3 text-center">
           <Lighthouse className="h-24 w-auto" />
-          <h1 className="text-2xl font-semibold tracking-tight">智能整理</h1>
+          <h1 className="text-xl font-semibold tracking-tight">智能整理</h1>
           <p className="text-sm text-muted-foreground">
             智能体会和你对话，梳理出一套分类体系并按它重排书签。先在设置里配置一个支持工具调用的 OpenAI 兼容服务。
           </p>
           <Button onClick={onOpenSettings}>去设置</Button>
         </div>
-      </section>
+      </div>
     );
   }
 
   return (
-    <section className="space-y-6 p-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">智能整理</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            智能体按你勾选的范围提出分类体系，你确认后才会移动书签，执行前自动创建恢复点。
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="gap-1.5 px-2.5 py-1 font-normal">
-            <ShieldCheck className="text-primary" />
-            发送给 AI：{PRIVACY_LABEL[config.privacy]}
-          </Badge>
-          {state.transcript.length > 0 && (
-            <Button variant="ghost" size="sm" onClick={() => store.reset()}>
-              <RotateCcw />
-              重新开始
-            </Button>
-          )}
-        </div>
-      </div>
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+    <div className="flex h-full min-h-[600px] flex-col gap-4 px-6 py-5">
+      <PageHeader
+        title="智能整理"
+        subtitle="智能体按你勾选的范围提出分类体系，你确认后才会移动书签，执行前自动创建恢复点。"
+        actions={
+          <>
+            <Pill>
+              <ShieldCheck className="size-3.5" />
+              发送给 AI：{PRIVACY_LABEL[config.privacy]}
+            </Pill>
+            {state.transcript.length > 0 && (
+              <Button variant="outline" size="sm" onClick={() => store.reset()}>
+                <RotateCcw />
+                重新开始
+              </Button>
+            )}
+          </>
+        }
+      />
+
+      {/* 对话与方案两栏等高；AI 标签放在右栏底部 */}
+      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <ChatPanel
           state={state}
           roots={roots}
@@ -111,7 +112,7 @@ export function AgentOrganizeView({ index, roots, onOpenSettings }: Props) {
           onRetry={() => void store.retry()}
           onContinue={() => void store.continueAfterLimit()}
         />
-        <div className="lg:sticky lg:top-8 lg:self-start">
+        <div className="flex min-h-0 flex-col gap-4">
           <PlanPanel
             plan={state.plan}
             roots={roots}
@@ -119,8 +120,10 @@ export function AgentOrganizeView({ index, roots, onOpenSettings }: Props) {
             highlight={state.status === 'finished'}
             onPreview={() => setPreviewOpen(true)}
           />
+          <AiTagsCard index={index} config={config} />
         </div>
       </div>
+
       <PlanPreviewDialog
         open={previewOpen}
         onOpenChange={setPreviewOpen}
@@ -129,7 +132,6 @@ export function AgentOrganizeView({ index, roots, onOpenSettings }: Props) {
         inScope={inScope}
         bookmarkTitle={bookmarkTitle}
       />
-      <AiTagsCard index={index} config={config} />
-    </section>
+    </div>
   );
 }

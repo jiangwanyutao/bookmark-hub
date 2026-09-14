@@ -50,22 +50,14 @@ export function AiTagsCard({ index, config }: { index: BookmarkIndex; config: Ai
     }
   }
 
-  // 次要功能：一行入口，不占一整张卡片
+  // 次要功能：右栏底部的小面板
   return (
-    <section className="space-y-3 border-t pt-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <Tags className="size-5 shrink-0 text-primary" />
-          <div className="min-w-0">
-            <h2 className="text-sm font-semibold">AI 标签</h2>
-            <p className="text-sm text-muted-foreground">
-              {untagged.length > 0
-                ? `${untagged.length} 个书签还没有标签，约 ${estimateRequests(untagged.length)} 次请求。`
-                : '所有书签都有标签了。'}
-              标签只存在本机，搜索时能按标签找到。
-            </p>
-          </div>
-        </div>
+    <section className="shrink-0 space-y-2.5 rounded-xl border bg-card p-4 shadow-card">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 text-sm font-semibold">
+          <Tags className="size-4 text-muted-foreground" />
+          AI 标签
+        </h2>
         {tagging ? (
           <Button variant="outline" size="sm" onClick={() => controllerRef.current?.abort()}>
             停止
@@ -76,8 +68,14 @@ export function AiTagsCard({ index, config }: { index: BookmarkIndex; config: Ai
           </Button>
         )}
       </div>
+      <p className="text-xs text-muted-foreground">
+        {untagged.length > 0
+          ? `${untagged.length} 个书签还没有标签，约 ${estimateRequests(untagged.length)} 次请求。`
+          : '所有书签都有标签了。'}
+        标签只存在本机，搜索时能按标签找到。
+      </p>
       {tagging && progress && (
-        <div className="space-y-2 text-sm text-muted-foreground">
+        <div className="space-y-1.5 text-xs text-muted-foreground">
           <Progress value={(progress[0] / progress[1]) * 100} aria-label="标签生成进度" />
           <p className="tabular-nums">
             第 {progress[0]} / {progress[1]} 批

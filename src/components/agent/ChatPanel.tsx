@@ -159,7 +159,7 @@ export function ChatPanel({ state, roots, countByFolder, onStart, onSend, onStop
   const userCount = state.transcript.filter((item) => item.kind === 'user').length;
 
   return (
-    <div className="flex h-[70vh] min-h-[480px] flex-col rounded-xl border bg-card">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border bg-card shadow-card">
       <div className="flex items-center justify-between border-b px-4 py-2 text-xs text-muted-foreground">
         <span className="flex items-center gap-2">
           <span aria-hidden className={cn('size-2 rounded-full', STATUS_DOT[state.status])} />

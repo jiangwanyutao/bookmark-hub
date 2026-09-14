@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 const errorMessage = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
+/** AI 服务表单（放在设置页的面板里，标题由面板提供）。 */
 export function AiSettingsCard() {
   const [saved, setSaved] = useState<AiConfig | null | undefined>(undefined);
   const [privacy, setPrivacy] = useState<Privacy>('title_domain');
@@ -60,36 +61,28 @@ export function AiSettingsCard() {
   if (saved === undefined) return null;
 
   return (
-    <div className="mt-10 border-t pt-8">
-      <h2 className="text-lg font-semibold tracking-tight">AI 服务</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
+    <div className="space-y-5">
+      <p className="text-sm text-muted-foreground">
         使用任何 OpenAI 兼容接口（如 DeepSeek、通义千问、Kimi）。Key 只保存在本机，只会发给你填写的地址；费用由你的账户承担。
       </p>
-      <form key={saved?.baseUrl ?? 'new'} onSubmit={(e) => void handleSubmit(e)} className="mt-6 grid gap-5 sm:grid-cols-2">
-        <div className="space-y-2 sm:col-span-2">
+      <form key={saved?.baseUrl ?? 'new'} onSubmit={(e) => void handleSubmit(e)} className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5 sm:col-span-2">
           <Label htmlFor="ai-base-url">Base URL</Label>
-          <Input id="ai-base-url" name="baseUrl" defaultValue={saved?.baseUrl} placeholder="https://api.deepseek.com/v1" className="bg-card" />
+          <Input id="ai-base-url" name="baseUrl" defaultValue={saved?.baseUrl} placeholder="https://api.deepseek.com/v1" />
           <p className="text-xs text-muted-foreground">填到 /v1 这一级，不用加 /chat/completions。</p>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor="ai-api-key">API Key</Label>
-          <Input
-            id="ai-api-key"
-            name="apiKey"
-            type="password"
-            autoComplete="off"
-            placeholder={saved ? '已保存，留空则不修改' : 'sk-…'}
-            className="bg-card"
-          />
+          <Input id="ai-api-key" name="apiKey" type="password" autoComplete="off" placeholder={saved ? '已保存，留空则不修改' : 'sk-…'} />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor="ai-model">模型名</Label>
-          <Input id="ai-model" name="model" defaultValue={saved?.model} placeholder="deepseek-chat" className="bg-card" />
+          <Input id="ai-model" name="model" defaultValue={saved?.model} placeholder="deepseek-chat" />
         </div>
-        <div className="space-y-2 sm:col-span-2">
+        <div className="space-y-1.5 sm:col-span-2">
           <Label htmlFor="ai-privacy">发给 AI 的信息</Label>
           <Select value={privacy} onValueChange={(v) => setPrivacy(v as Privacy)}>
-            <SelectTrigger id="ai-privacy" className="w-full bg-card">
+            <SelectTrigger id="ai-privacy" className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

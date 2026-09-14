@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AiSettingsCard } from './AiSettingsCard';
+import { PageHeader } from './PageHeader';
+import { Panel } from './Panel';
 
 /** 接受「wiki.company.com」或整条网址，取出域名；无效时返回 null。 */
 function parseHost(value: string): string | null {
@@ -55,54 +57,55 @@ export function SettingsView() {
     await reload();
   }
 
-  // 两个段落用分隔线隔开，不套卡片
   return (
-    <section className="mx-auto max-w-3xl p-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">设置</h1>
-        <p className="mt-1 text-sm text-muted-foreground">配置 AI 整理服务，以及需要 VPN 才能访问的网站。</p>
-      </div>
+    <div className="flex h-full min-h-[560px] flex-col gap-4 px-6 py-5">
+      <PageHeader title="设置" subtitle="配置 AI 整理服务，以及需要 VPN 才能访问的网站。" />
 
-      <AiSettingsCard />
+      {/* 两块等高面板，内容多时各自滚动 */}
+      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-2">
+        <Panel title="AI 服务" bodyClassName="overflow-auto p-5">
+          <AiSettingsCard />
+        </Panel>
 
-      <div className="mt-12 border-t pt-8">
-        <h2 className="text-lg font-semibold tracking-tight">需要 VPN 的网站</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          这些网站在当前网络下连不上时，只会标为「可能需要 VPN」，不会判为失效。适合公司内网系统和需要代理才能访问的网站。
-        </p>
-        <form onSubmit={(e) => void handleAdd(e)} className="mt-5 flex gap-2">
-          <Label htmlFor="vpn-host" className="sr-only">
-            网站域名
-          </Label>
-          <Input id="vpn-host" name="host" placeholder="wiki.company.com" aria-invalid={error !== null} className="bg-card" />
-          <Button type="submit">
-            <Plus />
-            添加
-          </Button>
-        </form>
-        {error && (
-          <p role="alert" className="mt-2 text-sm text-destructive">
-            {error}
+        <Panel title="需要 VPN 的网站" meta={hosts ? `${hosts.length} 个` : undefined} bodyClassName="flex flex-col gap-4 p-5">
+          <p className="shrink-0 text-sm text-muted-foreground">
+            这些网站在当前网络下连不上时，只会标为「可能需要 VPN」，不会判为失效。适合公司内网系统和需要代理才能访问的网站。
           </p>
-        )}
-
-        {hosts?.length === 0 && (
-          <p className="mt-4 text-sm text-muted-foreground">还没有添加。也可以在「失效链接」「待确认」里勾选书签后点「需要 VPN」。</p>
-        )}
-        {hosts && hosts.length > 0 && (
-          <ul className="mt-4 divide-y rounded-xl border bg-card">
-            {hosts.map((h) => (
-              <li key={h.host} className="flex items-center justify-between gap-4 px-4 py-2 text-sm">
-                <span className="min-w-0 truncate">{h.host}</span>
-                <Button size="sm" variant="ghost" onClick={() => void handleRemove(h.host)} aria-label={`移除 ${h.host}`}>
-                  <X />
-                  移除
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
+          <div className="shrink-0">
+            <form onSubmit={(e) => void handleAdd(e)} className="flex gap-2">
+              <Label htmlFor="vpn-host" className="sr-only">
+                网站域名
+              </Label>
+              <Input id="vpn-host" name="host" placeholder="wiki.company.com" aria-invalid={error !== null} />
+              <Button type="submit">
+                <Plus />
+                添加
+              </Button>
+            </form>
+            {error && (
+              <p role="alert" className="mt-2 text-sm text-destructive">
+                {error}
+              </p>
+            )}
+          </div>
+          {hosts?.length === 0 && (
+            <p className="text-sm text-muted-foreground">还没有添加。也可以在「失效链接」「待确认」里勾选书签后点「需要 VPN」。</p>
+          )}
+          {hosts && hosts.length > 0 && (
+            <ul className="min-h-0 flex-1 divide-y overflow-auto rounded-lg border">
+              {hosts.map((h) => (
+                <li key={h.host} className="flex items-center justify-between gap-4 px-3 py-1.5 text-sm">
+                  <span className="min-w-0 truncate">{h.host}</span>
+                  <Button size="sm" variant="ghost" onClick={() => void handleRemove(h.host)} aria-label={`移除 ${h.host}`}>
+                    <X />
+                    移除
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
       </div>
-    </section>
+    </div>
   );
 }

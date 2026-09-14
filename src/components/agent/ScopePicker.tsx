@@ -54,23 +54,23 @@ export function ScopePicker({ roots, countByFolder, onStart }: Props) {
     );
   }
 
-  // 一层容器：品牌色横幅 + 目录列表各自独立，不再外包卡片
+  // 一个面板：说明横幅 + 目录列表（面板内滚动）+ 底部操作
   return (
-    <div className="flex min-h-[480px] flex-col gap-4">
-      <div className="flex items-center gap-4 rounded-xl bg-accent px-5 py-4 text-accent-foreground">
-        <Lighthouse className="h-16 w-auto shrink-0" />
-        <div className="space-y-1">
-          <p className="font-semibold text-foreground">先圈出这次要整理的目录</p>
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border bg-card shadow-card">
+      <div className="flex shrink-0 items-center gap-4 border-b bg-accent px-5 py-3 text-accent-foreground">
+        <Lighthouse className="h-12 w-auto shrink-0" />
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-foreground">先圈出这次要整理的目录</p>
           <p className="text-sm">勾选目录（含子目录），再选新分类建在哪里。智能体提出分类后你可以随时插话调整，确认后才会移动书签。</p>
         </div>
       </div>
-      <div role="group" aria-label="整理范围" className="max-h-[50vh] min-h-0 flex-1 space-y-0.5 overflow-auto rounded-xl border bg-card p-2">
+      <div role="group" aria-label="整理范围" className="min-h-0 flex-1 space-y-0.5 overflow-auto p-2">
         {rows.map((row) => {
           const covered = row.ancestorIds.some((id) => checked.includes(id));
           return (
             <label
               key={row.id}
-              className="flex cursor-pointer items-center gap-2 rounded-md py-1 pr-2 text-sm hover:bg-accent has-disabled:cursor-default"
+              className="flex cursor-pointer items-center gap-2 rounded-md py-1 pr-2 text-sm hover:bg-muted/60 has-disabled:cursor-default"
               style={{ paddingLeft: 8 + row.depth * INDENT_PX }}
             >
               <Checkbox checked={covered || checked.includes(row.id)} disabled={covered} onCheckedChange={(value) => toggle(row, value === true)} />
@@ -80,7 +80,7 @@ export function ScopePicker({ roots, countByFolder, onStart }: Props) {
           );
         })}
       </div>
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex shrink-0 flex-wrap items-center gap-3 border-t px-4 py-3">
         <span id="scope-root-label" className="text-sm">
           新分类体系建在
         </span>
