@@ -24,6 +24,16 @@ const STATUS_LABEL: Record<OrganizeState['status'], string> = {
   error: '出错了',
 };
 
+// 状态圆点只是辅助，旁边总有状态文字
+const STATUS_DOT: Record<OrganizeState['status'], string> = {
+  idle: 'bg-muted-foreground',
+  running: 'bg-primary motion-safe:animate-pulse',
+  waiting: 'bg-amber-500',
+  finished: 'bg-primary',
+  limit: 'bg-amber-500',
+  error: 'bg-destructive',
+};
+
 type ToolItem = Extract<TranscriptItem, { kind: 'tool' }>;
 type Block = Exclude<TranscriptItem, ToolItem> | { kind: 'steps'; id: string; steps: ToolItem[] };
 
@@ -149,9 +159,12 @@ export function ChatPanel({ state, roots, countByFolder, onStart, onSend, onStop
   const userCount = state.transcript.filter((item) => item.kind === 'user').length;
 
   return (
-    <div className="flex h-[70vh] min-h-[480px] flex-col rounded-xl border">
+    <div className="flex h-[70vh] min-h-[480px] flex-col rounded-xl border bg-card">
       <div className="flex items-center justify-between border-b px-4 py-2 text-xs text-muted-foreground">
-        <span>{STATUS_LABEL[state.status]}</span>
+        <span className="flex items-center gap-2">
+          <span aria-hidden className={cn('size-2 rounded-full', STATUS_DOT[state.status])} />
+          {STATUS_LABEL[state.status]}
+        </span>
         <span className="tabular-nums">已用 {state.tokens.toLocaleString('zh-CN')} tokens</span>
       </div>
       <Conversation className="min-h-0" aria-live="polite">

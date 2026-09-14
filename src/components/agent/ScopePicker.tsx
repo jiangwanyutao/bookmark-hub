@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Bot } from 'lucide-react';
+import { Lighthouse } from '@/components/brand/Lighthouse';
 import { listFolders, type TreeNode } from '@/lib/bookmarks';
 import type { PlanScope } from '@/lib/agent/plan';
 import { Button } from '@/components/ui/button';
@@ -54,15 +54,17 @@ export function ScopePicker({ roots, countByFolder, onStart }: Props) {
     );
   }
 
+  // 一层容器：品牌色横幅 + 目录列表各自独立，不再外包卡片
   return (
-    <div className="flex min-h-[480px] flex-col gap-4 rounded-xl border p-6">
-      <div className="flex items-start gap-3">
-        <Bot className="mt-0.5 size-6 shrink-0 text-primary" />
-        <p className="text-sm text-muted-foreground">
-          勾选要整理的目录（含子目录），再选新分类体系建在哪个目录下。智能体会提出分类体系，过程中你可以随时插话调整，确认后才会移动书签。
-        </p>
+    <div className="flex min-h-[480px] flex-col gap-4">
+      <div className="flex items-center gap-4 rounded-xl bg-accent px-5 py-4 text-accent-foreground">
+        <Lighthouse className="h-16 w-auto shrink-0" />
+        <div className="space-y-1">
+          <p className="font-semibold text-foreground">先圈出这次要整理的目录</p>
+          <p className="text-sm">勾选目录（含子目录），再选新分类建在哪里。智能体提出分类后你可以随时插话调整，确认后才会移动书签。</p>
+        </div>
       </div>
-      <div role="group" aria-label="整理范围" className="max-h-[50vh] min-h-0 flex-1 space-y-0.5 overflow-auto rounded-lg border p-2">
+      <div role="group" aria-label="整理范围" className="max-h-[50vh] min-h-0 flex-1 space-y-0.5 overflow-auto rounded-xl border bg-card p-2">
         {rows.map((row) => {
           const covered = row.ancestorIds.some((id) => checked.includes(id));
           return (

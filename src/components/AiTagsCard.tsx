@@ -8,7 +8,6 @@ import { estimateRequests } from '@/lib/ai/batches';
 import { runTagging } from '@/lib/ai/tags';
 import { useTags } from '@/hooks/useTags';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 
 export function AiTagsCard({ index, config }: { index: BookmarkIndex; config: AiConfig }) {
@@ -51,39 +50,40 @@ export function AiTagsCard({ index, config }: { index: BookmarkIndex; config: Ai
     }
   }
 
+  // 次要功能：一行入口，不占一整张卡片
   return (
-    <Card>
-      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
-        <div className="space-y-1">
-          <CardTitle className="text-base">AI 标签</CardTitle>
-          <CardDescription>给书签打上主题标签，搜索时能按标签找到。标签只存在本机，不改动浏览器书签。</CardDescription>
+    <section className="space-y-3 border-t pt-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <Tags className="size-5 shrink-0 text-primary" />
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold">AI 标签</h2>
+            <p className="text-sm text-muted-foreground">
+              {untagged.length > 0
+                ? `${untagged.length} 个书签还没有标签，约 ${estimateRequests(untagged.length)} 次请求。`
+                : '所有书签都有标签了。'}
+              标签只存在本机，搜索时能按标签找到。
+            </p>
+          </div>
         </div>
         {tagging ? (
-          <Button variant="outline" onClick={() => controllerRef.current?.abort()}>
+          <Button variant="outline" size="sm" onClick={() => controllerRef.current?.abort()}>
             停止
           </Button>
         ) : (
-          <Button variant="outline" disabled={untagged.length === 0} onClick={() => void generate()}>
-            <Tags />
+          <Button variant="outline" size="sm" disabled={untagged.length === 0} onClick={() => void generate()}>
             生成标签
           </Button>
         )}
-      </CardHeader>
-      <CardContent className="space-y-3 text-sm text-muted-foreground">
-        <p>
-          {untagged.length > 0
-            ? `${untagged.length} 个书签还没有标签，约 ${estimateRequests(untagged.length)} 次请求。`
-            : '所有书签都有标签了。'}
-        </p>
-        {tagging && progress && (
-          <div className="space-y-2">
-            <Progress value={(progress[0] / progress[1]) * 100} aria-label="标签生成进度" />
-            <p className="tabular-nums">
-              第 {progress[0]} / {progress[1]} 批
-            </p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      </div>
+      {tagging && progress && (
+        <div className="space-y-2 text-sm text-muted-foreground">
+          <Progress value={(progress[0] / progress[1]) * 100} aria-label="标签生成进度" />
+          <p className="tabular-nums">
+            第 {progress[0]} / {progress[1]} 批
+          </p>
+        </div>
+      )}
+    </section>
   );
 }

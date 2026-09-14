@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { RotateCcw, ShieldCheck } from 'lucide-react';
+import { Lighthouse } from './brand/Lighthouse';
 import type { BookmarkIndex, TreeNode } from '@/lib/bookmarks';
 import { loadAiConfig, requestAiHostPermission, type AiConfig } from '@/lib/ai/config';
 import type { PlanScope } from '@/lib/agent/plan';
@@ -7,6 +9,7 @@ import { PRIVACY_LABEL } from '@/lib/ai/prompt';
 import { skipReason } from '@/lib/scan/rules';
 import { useOrganizeAgent } from '@/hooks/useOrganizeAgent';
 import { useTags } from '@/hooks/useTags';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AiTagsCard } from './AiTagsCard';
 import { ChatPanel } from './agent/ChatPanel';
@@ -62,25 +65,42 @@ export function AgentOrganizeView({ index, roots, onOpenSettings }: Props) {
   if (config === undefined) return null;
   if (!config) {
     return (
-      <section className="mx-auto max-w-3xl space-y-4 p-8">
-        <h1 className="text-2xl font-semibold tracking-tight">智能整理</h1>
-        <p className="text-sm text-muted-foreground">
-          智能体会和你对话，梳理出一套分类体系并按它重排书签。先在设置里配置一个支持工具调用的 OpenAI 兼容服务。
-        </p>
-        <Button onClick={onOpenSettings}>去设置</Button>
+      <section className="flex min-h-full items-center justify-center p-8">
+        <div className="flex max-w-md flex-col items-center gap-3 text-center">
+          <Lighthouse className="h-24 w-auto" />
+          <h1 className="text-2xl font-semibold tracking-tight">智能整理</h1>
+          <p className="text-sm text-muted-foreground">
+            智能体会和你对话，梳理出一套分类体系并按它重排书签。先在设置里配置一个支持工具调用的 OpenAI 兼容服务。
+          </p>
+          <Button onClick={onOpenSettings}>去设置</Button>
+        </div>
       </section>
     );
   }
 
   return (
     <section className="space-y-6 p-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">智能整理</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          智能体按你勾选的范围提出分类体系，你确认后才会移动书签，执行前自动创建恢复点。当前发送给 AI：{PRIVACY_LABEL[config.privacy]}。
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">智能整理</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            智能体按你勾选的范围提出分类体系，你确认后才会移动书签，执行前自动创建恢复点。
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="gap-1.5 px-2.5 py-1 font-normal">
+            <ShieldCheck className="text-primary" />
+            发送给 AI：{PRIVACY_LABEL[config.privacy]}
+          </Badge>
+          {state.transcript.length > 0 && (
+            <Button variant="ghost" size="sm" onClick={() => store.reset()}>
+              <RotateCcw />
+              重新开始
+            </Button>
+          )}
+        </div>
       </div>
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <ChatPanel
           state={state}
           roots={roots}
@@ -91,7 +111,7 @@ export function AgentOrganizeView({ index, roots, onOpenSettings }: Props) {
           onRetry={() => void store.retry()}
           onContinue={() => void store.continueAfterLimit()}
         />
-        <div className="space-y-3">
+        <div className="lg:sticky lg:top-8 lg:self-start">
           <PlanPanel
             plan={state.plan}
             roots={roots}
@@ -99,11 +119,6 @@ export function AgentOrganizeView({ index, roots, onOpenSettings }: Props) {
             highlight={state.status === 'finished'}
             onPreview={() => setPreviewOpen(true)}
           />
-          {state.transcript.length > 0 && (
-            <Button variant="ghost" size="sm" onClick={() => store.reset()}>
-              重新开始
-            </Button>
-          )}
         </div>
       </div>
       <PlanPreviewDialog
