@@ -57,7 +57,7 @@ export function BookmarkList({ bookmarks, selectedId, onSelect }: Props) {
               <Favicon url={b.url} name={b.title || b.domain || b.url} className="size-5 rounded" />
               <span className="flex min-w-0 flex-col">
                 <span className="truncate text-sm font-medium">{b.title || b.url}</span>
-                <span className="truncate text-xs text-muted-foreground">
+                <span className={cn('truncate text-xs', selected ? 'text-accent-foreground' : 'text-muted-foreground')}>
                   {b.domain || b.url.split(':')[0]} · {b.folderPath}
                 </span>
               </span>

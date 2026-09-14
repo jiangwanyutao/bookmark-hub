@@ -15,7 +15,7 @@ interface Props {
 export function BookmarkDetail({ bookmark, folders, tags, onSaveTags }: Props) {
   if (!bookmark) {
     return (
-      <aside className="flex flex-col items-center justify-center gap-3 border-l bg-muted/30 p-6 text-center">
+      <aside className="flex flex-col items-center justify-center gap-3 rounded-xl border bg-card p-6 text-center shadow-card">
         <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
           <MousePointerClick className="size-6" />
         </div>
@@ -35,7 +35,7 @@ export function BookmarkDetail({ bookmark, folders, tags, onSaveTags }: Props) {
   ];
 
   return (
-    <aside className="overflow-auto border-l bg-muted/30 p-5">
+    <aside className="overflow-auto rounded-xl border bg-card p-5 shadow-card">
       <div className="flex items-start gap-3">
         <Favicon
           key={bookmark.id}

@@ -35,7 +35,7 @@ function FolderButton({
     >
       {icon}
       <span className="truncate">{name}</span>
-      <span className="ml-auto text-xs text-muted-foreground tabular-nums">{count}</span>
+      <span className={cn('ml-auto text-xs tabular-nums', active ? 'text-accent-foreground' : 'text-muted-foreground')}>{count}</span>
     </Button>
   );
 }
@@ -45,7 +45,7 @@ export function FolderTree({ roots, ...shared }: Shared & { roots: TreeNode[] })
   if (!root) return null;
 
   return (
-    <nav aria-label="文件夹" className="overflow-auto border-r bg-muted/30 p-2">
+    <nav aria-label="文件夹" className="overflow-auto rounded-xl border bg-card p-2 shadow-card">
       <p className="px-2 pt-2 pb-1.5 text-xs font-medium text-muted-foreground">目录</p>
       <FolderButton
         active={shared.selectedId === null}

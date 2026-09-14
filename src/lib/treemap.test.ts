@@ -1,48 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { TreeNode } from './bookmarks';
 import { buildIndex } from './bookmarks';
-import { folderTiles, squarify, type Rect } from './treemap';
-
-const W = 200;
-const H = 100;
-const area = (r: Rect) => r.w * r.h;
-const overlaps = (a: Rect, b: Rect) =>
-  a.x < b.x + b.w - 1e-9 && b.x < a.x + a.w - 1e-9 && a.y < b.y + b.h - 1e-9 && b.y < a.y + a.h - 1e-9;
-
-describe('squarify', () => {
-  const items = [6, 6, 4, 3, 2, 2, 1].map((value, i) => ({ id: `f${i}`, value }));
-  const tiles = squarify(items, { x: 0, y: 0, w: W, h: H });
-
-  it('returns one tile per item with area proportional to its value', () => {
-    expect(tiles).toHaveLength(items.length);
-    const total = items.reduce((s, i) => s + i.value, 0);
-    for (const t of tiles) {
-      const value = items.find((i) => i.id === t.id)!.value;
-      expect(area(t)).toBeCloseTo((value / total) * W * H, 6);
-    }
-  });
-
-  it('keeps every tile inside the bounds without overlapping', () => {
-    for (const t of tiles) {
-      expect(t.x).toBeGreaterThanOrEqual(-1e-9);
-      expect(t.y).toBeGreaterThanOrEqual(-1e-9);
-      expect(t.x + t.w).toBeLessThanOrEqual(W + 1e-9);
-      expect(t.y + t.h).toBeLessThanOrEqual(H + 1e-9);
-    }
-    for (let i = 0; i < tiles.length; i++) {
-      for (let j = i + 1; j < tiles.length; j++) expect(overlaps(tiles[i]!, tiles[j]!)).toBe(false);
-    }
-  });
-
-  it('ignores items without value and handles empty input', () => {
-    expect(squarify([{ id: 'a', value: 0 }], { x: 0, y: 0, w: W, h: H })).toEqual([]);
-    expect(squarify([], { x: 0, y: 0, w: W, h: H })).toEqual([]);
-  });
-
-  it('gives a single item the whole area', () => {
-    expect(squarify([{ id: 'a', value: 3 }], { x: 0, y: 0, w: W, h: H })).toEqual([{ id: 'a', x: 0, y: 0, w: W, h: H }]);
-  });
-});
+import { childFolderCounts, folderTiles } from './treemap';
 
 const bm = (id: string): TreeNode => ({ id, title: id, url: `https://${id}.com/` });
 const folder = (id: string, count: number): TreeNode => ({
@@ -79,5 +38,33 @@ describe('folderTiles', () => {
       { id: 'b', name: '目录b', value: 3, folderId: 'b' },
       { id: 'rest', name: '其余 2 项', value: 3, folderId: null },
     ]);
+  });
+});
+
+describe('childFolderCounts', () => {
+  const tree: TreeNode[] = [
+    {
+      id: '0',
+      title: '',
+      children: [
+        {
+          id: '1',
+          title: '书签栏',
+          children: [{ id: 'front', title: '前端', children: [folder('react', 2), folder('vue', 4), folder('none', 0), bm('x')] }],
+        },
+      ],
+    },
+  ];
+  const { countByFolder } = buildIndex(tree);
+
+  it('lists direct subfolders with their bookmark counts, largest first, skipping empty ones', () => {
+    expect(childFolderCounts(tree, 'front', countByFolder)).toEqual([
+      { id: 'vue', name: '目录vue', count: 4 },
+      { id: 'react', name: '目录react', count: 2 },
+    ]);
+  });
+
+  it('returns nothing for an unknown folder', () => {
+    expect(childFolderCounts(tree, 'missing', countByFolder)).toEqual([]);
   });
 });
