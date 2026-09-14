@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import type { BookmarkIndex, TreeNode } from '@/lib/bookmarks';
 import { loadAiConfig, requestAiHostPermission, type AiConfig } from '@/lib/ai/config';
+import type { PlanScope } from '@/lib/agent/plan';
 import { PRIVACY_LABEL } from '@/lib/ai/prompt';
 import { skipReason } from '@/lib/scan/rules';
 import { useOrganizeAgent } from '@/hooks/useOrganizeAgent';
@@ -43,7 +44,7 @@ export function AgentOrganizeView({ index, roots, onOpenSettings }: Props) {
     return (id: string) => titles.get(id) ?? id;
   }, [index]);
 
-  async function start() {
+  async function start(scope: PlanScope) {
     if (!config) return;
     // 授权须是点击后的第一个 await
     const access = await requestAiHostPermission(config.baseUrl);
@@ -51,7 +52,11 @@ export function AgentOrganizeView({ index, roots, onOpenSettings }: Props) {
       if (access === 'denied') toast.error('没有获得访问 AI 服务地址的权限，请在弹出的授权框中点允许后再试');
       return;
     }
-    await store.start(config);
+    try {
+      await store.start(config, scope);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    }
   }
 
   if (config === undefined) return null;
@@ -72,13 +77,15 @@ export function AgentOrganizeView({ index, roots, onOpenSettings }: Props) {
       <div>
         <h1 className="text-2xl font-semibold">智能整理</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          智能体会问清范围、提出分类体系，你确认后才会移动书签，执行前自动创建恢复点。当前发送给 AI：{PRIVACY_LABEL[config.privacy]}。
+          智能体按你勾选的范围提出分类体系，你确认后才会移动书签，执行前自动创建恢复点。当前发送给 AI：{PRIVACY_LABEL[config.privacy]}。
         </p>
       </div>
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <ChatPanel
           state={state}
-          onStart={() => void start()}
+          roots={roots}
+          countByFolder={index.countByFolder}
+          onStart={(scope) => void start(scope)}
           onSend={(text) => void store.send(text)}
           onStop={() => store.stop()}
           onRetry={() => void store.retry()}

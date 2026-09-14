@@ -1,9 +1,9 @@
 import type { AgentMessage, StreamFn } from '@earendil-works/pi-agent-core';
 import type { Model } from '@earendil-works/pi-ai';
-import { buildIndex, type TreeNode } from '../bookmarks';
+import { buildIndex, listFolders, type FolderOption, type TreeNode } from '../bookmarks';
 import type { AiConfig } from '../ai/config';
 import { skipReason } from '../scan/rules';
-import { emptyPlan, type OrganizePlan } from './plan';
+import { emptyPlan, setScope, type OrganizePlan, type PlanScope } from './plan';
 import { createRefTable } from './refs';
 import { createOrganizeSession, type OrganizeSession } from './session';
 import { applyAgentEvent, type TranscriptItem } from './transcript';
@@ -29,7 +29,7 @@ export interface OrganizeStoreDeps {
 export interface OrganizeStore {
   getState(): OrganizeState;
   subscribe(listener: () => void): () => void;
-  start(config: AiConfig): Promise<void>;
+  start(config: AiConfig, scope: PlanScope): Promise<void>;
   send(text: string): Promise<void>;
   stop(): void;
   retry(): Promise<void>;
@@ -37,7 +37,12 @@ export interface OrganizeStore {
   reset(): void;
 }
 
-const START_PROMPT = '开始整理';
+/** 范围由用户在界面上勾选，第一条消息把目录 id 告诉模型，免得它再调 list_folders、再问一遍。 */
+function startPrompt(scope: PlanScope, folders: FolderOption[]): string {
+  const path = new Map(folders.map((f) => [f.id, f.path]));
+  const name = (id: string) => `${path.get(id)}（id ${id}）`;
+  return `开始整理。整理范围：${scope.folderIds.map(name).join('、')}；新分类体系建在「${name(scope.rootFolderId)}」下。`;
+}
 
 const initialState = (): OrganizeState => ({
   status: 'idle',
@@ -120,8 +125,12 @@ export function createOrganizeStore(deps: OrganizeStoreDeps): OrganizeStore {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
-    async start(config) {
+    async start(config, scope) {
+      const folders = listFolders(deps.getRoots());
+      // 先校验再 reset()：范围不对时不丢掉当前会话
+      const plan = setScope(emptyPlan(), scope, new Set(folders.map((f) => f.id)));
       reset();
+      set({ plan });
       const { model, streamFn } = deps.createModel(config);
       // 只给会发给 AI 的书签编号：内网书签不发送，编了号模型也可能瞎猜中真实 id
       const refs = createRefTable(
@@ -156,7 +165,7 @@ export function createOrganizeStore(deps: OrganizeStoreDeps): OrganizeStore {
         set({ transcript: applyAgentEvent(state.transcript, event), tokens: state.tokens + used });
       });
       const current = session;
-      await run(current, () => current.agent.prompt(START_PROMPT));
+      await run(current, () => current.agent.prompt(startPrompt(scope, folders)));
     },
     async send(text) {
       const message = text.trim();

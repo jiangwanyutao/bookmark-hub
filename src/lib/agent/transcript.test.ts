@@ -39,6 +39,16 @@ describe('applyAgentEvent', () => {
     expect(items).toEqual([]);
   });
 
+  it('keeps the model reasoning even when the reply only called tools', () => {
+    const thinking = (text: string) => assistant('', { content: [{ type: 'thinking', thinking: text }], stopReason: 'toolUse' });
+    const items = reduce([
+      { type: 'message_start', message: assistant('') },
+      { type: 'message_update', message: thinking('先看'), assistantMessageEvent: { type: 'thinking_delta' } as never },
+      { type: 'message_end', message: thinking('先看看目录结构') },
+    ]);
+    expect(items).toEqual([{ kind: 'assistant', id: 'assistant-0', text: '', reasoning: '先看看目录结构', streaming: false }]);
+  });
+
   it('shows one line per tool call with its outcome', () => {
     const items = reduce([
       { type: 'tool_execution_start', toolCallId: 't1', toolName: 'assign', args: { refs: ['b1', 'b2'], category: '教程' } },

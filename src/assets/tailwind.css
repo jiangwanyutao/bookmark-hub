@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@source "../../node_modules/streamdown/dist/*.js";
 
 /* shadcn/ui 主题变量；主色沿用 PRD 的紫色。暗色跟随系统（Tailwind v4 默认的 dark 变体即 prefers-color-scheme） */
 :root {

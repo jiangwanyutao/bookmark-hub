@@ -16,6 +16,7 @@ const roots: TreeNode[] = [
   },
 ];
 // a=b1 b=b2
+const scope = { folderIds: ["2"], rootFolderId: "1" };
 const config = { baseUrl: 'https://example.com/v1', apiKey: 'sk', model: 'm', privacy: 'title_domain' as const };
 const call = (name: string, args: Record<string, unknown>, id: string) =>
   fauxAssistantMessage(fauxToolCall(name, args, { id }), { stopReason: 'toolUse' });
@@ -38,16 +39,34 @@ describe('createOrganizeStore', () => {
     vi.restoreAllMocks();
   });
 
+  it('starts from the scope picked in the UI and tells the agent the folder ids', async () => {
+    const { faux, store } = setup();
+    faux.setResponses([fauxAssistantMessage('好的')]);
+
+    await store.start(config, scope);
+
+    const state = store.getState();
+    expect(state.plan.scope).toEqual(scope);
+    expect(state.transcript[0]).toEqual({ kind: 'user', id: 'user-0', text: '开始整理。整理范围：其他书签（id 2）；新分类体系建在「书签栏（id 1）」下。' });
+  });
+
+  it('rejects an empty scope without starting a session', async () => {
+    const { faux, store } = setup();
+
+    await expect(store.start(config, { folderIds: [], rootFolderId: '1' })).rejects.toThrow('至少选择一个目录');
+    expect(faux.state.callCount).toBe(0);
+    expect(store.getState().status).toBe('idle');
+  });
+
   it('waits for the user after the agent asks a question', async () => {
     const { faux, store } = setup();
     faux.setResponses([call('ask_user', { question: '整理哪些目录？', options: ['其他书签'] }, 't1')]);
 
-    await store.start(config);
+    await store.start(config, scope);
 
     const state = store.getState();
     expect(state.status).toBe('waiting');
     expect(state.question).toEqual({ text: '整理哪些目录？', options: ['其他书签'] });
-    expect(state.transcript[0]).toEqual({ kind: 'user', id: 'user-0', text: '开始整理' });
     expect(state.transcript.some((i) => i.kind === 'tool' && i.label === '向你提问')).toBe(true);
   });
 
@@ -62,7 +81,7 @@ describe('createOrganizeStore', () => {
       call('finish', { summary: '分成 2 类' }, 't6'),
     ]);
 
-    await store.start(config);
+    await store.start(config, scope);
     await store.send('其他书签，放书签栏下');
 
     const state = store.getState();
@@ -76,7 +95,7 @@ describe('createOrganizeStore', () => {
     const { faux, store } = setup();
     faux.setResponses([fauxAssistantMessage('', { stopReason: 'error', errorMessage: '401 API Key 无效' }), fauxAssistantMessage('好了')]);
 
-    await store.start(config);
+    await store.start(config, scope);
     expect(store.getState().status).toBe('error');
     expect(store.getState().transcript.some((i) => i.kind === 'error' && i.text === '401 API Key 无效')).toBe(true);
 
@@ -89,7 +108,7 @@ describe('createOrganizeStore', () => {
     const { faux, store } = setup(1);
     faux.setResponses([call('list_folders', {}, 'l1'), fauxAssistantMessage('继续完成')]);
 
-    await store.start(config);
+    await store.start(config, scope);
     expect(store.getState().status).toBe('limit');
 
     await store.continueAfterLimit();
@@ -113,7 +132,7 @@ describe('createOrganizeStore', () => {
       },
     ]);
 
-    await store.start(config);
+    await store.start(config, scope);
 
     expect(faux.state.callCount).toBe(2);
     expect(JSON.stringify(secondCallContext)).toContain('中台并到后端');
@@ -130,7 +149,7 @@ describe('createOrganizeStore', () => {
       fauxAssistantMessage('继续完成'),
     ]);
 
-    await store.start(config);
+    await store.start(config, scope);
     expect(store.getState().status).toBe('limit');
     expect(faux.state.callCount).toBe(2);
 
@@ -177,10 +196,10 @@ describe('createOrganizeStore', () => {
         return call('list_folders', {}, 't1');
       },
     ]);
-    const firstStart = store.start(config);
+    const firstStart = store.start(config, scope);
 
     faux2.setResponses([call('ask_user', { question: '整理哪些目录？' }, 't1')]);
-    await store.start(config); // 重新开始：旧的 prompt 还没落定
+    await store.start(config, scope); // 重新开始：旧的 prompt 还没落定
     expect(store.getState().status).toBe('waiting');
 
     releaseFirst();
@@ -193,7 +212,7 @@ describe('createOrganizeStore', () => {
   it('reset clears the conversation', async () => {
     const { faux, store } = setup();
     faux.setResponses([call('ask_user', { question: '范围？' }, 't1')]);
-    await store.start(config);
+    await store.start(config, scope);
     store.reset();
     expect(store.getState()).toMatchObject({ status: 'idle', transcript: [], question: null, summary: null, tokens: 0 });
   });
@@ -214,11 +233,11 @@ describe('createOrganizeStore', () => {
 
     const { faux, store } = setup();
     faux.setResponses([fauxAssistantMessage('第一次')]);
-    await store.start(config);
+    await store.start(config, scope);
     expect(unsubscribeSpy).not.toHaveBeenCalled();
 
     faux.setResponses([fauxAssistantMessage('第二次')]);
-    await store.start(config); // 内部 reset() 应在 abort 旧会话前退订它的监听器
+    await store.start(config, scope); // 内部 reset() 应在 abort 旧会话前退订它的监听器
     expect(unsubscribeSpy).toHaveBeenCalledTimes(1);
   });
 });

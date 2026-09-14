@@ -2,9 +2,20 @@ import type { AgentEvent, AgentMessage } from '@earendil-works/pi-agent-core';
 
 export type TranscriptItem =
   | { kind: 'user'; id: string; text: string }
-  | { kind: 'assistant'; id: string; text: string; streaming: boolean }
+  | { kind: 'assistant'; id: string; text: string; reasoning?: string; streaming: boolean }
   | { kind: 'tool'; id: string; toolCallId: string; label: string; status: 'running' | 'done' | 'error'; detail?: string }
   | { kind: 'error'; id: string; text: string };
+
+// 思考模型（如 deepseek-reasoner）返回的 reasoning_content 会被 pi-ai 解析成 thinking 内容
+const thinkingOf = (message: AgentMessage): string =>
+  'content' in message && Array.isArray(message.content) ? message.content.map((c) => (c.type === 'thinking' ? c.thinking : '')).join('') : '';
+
+type AssistantItem = Extract<TranscriptItem, { kind: 'assistant' }>;
+
+const withContent = (item: AssistantItem, message: AgentMessage): AssistantItem => {
+  const reasoning = thinkingOf(message);
+  return { ...item, text: textOf(message), ...(reasoning ? { reasoning } : {}) };
+};
 
 const textOf = (message: AgentMessage): string => {
   if (!('content' in message)) return '';
@@ -58,12 +69,12 @@ export function applyAgentEvent(items: TranscriptItem[], event: AgentEvent): Tra
       }
       return items;
     case 'message_update':
-      return event.message.role === 'assistant' ? replaceLastAssistant(items, (item) => ({ ...item, text: textOf(event.message) })) : items;
+      return event.message.role === 'assistant' ? replaceLastAssistant(items, (item) => withContent(item, event.message)) : items;
     case 'message_end': {
       if (event.message.role !== 'assistant') return items;
       const { stopReason, errorMessage } = event.message;
-      const text = textOf(event.message);
-      const settled = replaceLastAssistant(items, (item) => (text ? { ...item, text, streaming: false } : null));
+      const hasContent = Boolean(textOf(event.message) || thinkingOf(event.message));
+      const settled = replaceLastAssistant(items, (item) => (hasContent ? { ...withContent(item, event.message), streaming: false } : null));
       if (stopReason === 'error') return [...settled, { kind: 'error', id: `error-${settled.length}`, text: errorMessage ?? '模型调用失败' }];
       return settled;
     }

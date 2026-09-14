@@ -18,19 +18,15 @@ const lastToolText = (messages, name) => {
 
 function nextToolCall(messages) {
   const step = messages.filter((m) => m.role === 'assistant').length;
-  const folders = lastToolText(messages, 'list_folders').split('\n').map((l) => l.split(' | '));
-  const idOf = (name) => folders.find(([, p]) => p === name)?.[0];
   const listing = lastToolText(messages, 'list_bookmarks').split('\n').filter((l) => /^b\d+ \|/.test(l));
   const refsWhere = (re) => listing.filter((l) => re.test(l)).map((l) => l.split(' | ')[0]);
   switch (step) {
-    case 0: return ['list_folders', {}];
-    case 1: return ['ask_user', { question: '这次整理哪些目录？', options: ['其他书签'] }];
-    case 2: return ['set_scope', { folderIds: [idOf('其他书签')], rootFolderId: idOf('书签栏') }];
-    case 3: return ['list_bookmarks', { folderId: idOf('其他书签') }];
-    case 4: return ['propose_taxonomy', { categories: ['文档 / 前端', '教程'] }];
-    case 5: return ['assign', { refs: refsWhere(/React|Vue/), category: '文档 / 前端' }];
-    case 6: return ['assign', { refs: refsWhere(/Go|Rust/), category: '教程' }];
-    case 7: return ['finish', { summary: '分成「文档 / 前端」和「教程」两类' }];
+    // 范围在界面上勾选（其他书签 id 2），模型从第一条消息拿到 id
+    case 0: return ['list_bookmarks', { folderId: '2' }];
+    case 1: return ['propose_taxonomy', { categories: ['文档 / 前端', '教程'] }];
+    case 2: return ['assign', { refs: refsWhere(/React|Vue/), category: '文档 / 前端' }];
+    case 3: return ['assign', { refs: refsWhere(/Go|Rust/), category: '教程' }];
+    case 4: return ['finish', { summary: '分成「文档 / 前端」和「教程」两类' }];
     default: return null;
   }
 }
@@ -47,6 +43,8 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/event-stream' });
     if (call) {
       const [name, args] = call;
+      // 带上思考内容，验证界面显示「思考过程」
+      res.write(chunk({ role: 'assistant', reasoning_content: `先想想怎么调用 ${name}。` }));
       res.write(chunk({ role: 'assistant', content: null, tool_calls: [{ index: 0, id: `call_${messages.length}`, type: 'function', function: { name, arguments: JSON.stringify(args) } }] }));
       res.write(chunk({}, 'tool_calls'));
     } else {
@@ -102,9 +100,11 @@ try {
   await page.reload();
 
   await page.getByRole('button', { name: '智能整理' }).click();
+  await page.getByRole('checkbox', { name: /^其他书签/ }).click();
   await page.getByRole('button', { name: '开始整理' }).click();
-  await page.getByRole('button', { name: '其他书签', exact: true }).click();
   await page.getByText('已完成，去右侧预览并确认').waitFor();
+  await page.getByText(/思考过程/).first().waitFor();
+  console.log('PASS: 显示了步骤链和思考过程');
   await page.getByRole('button', { name: '预览并确认整理' }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: '确认整理' }).click();
   await page.getByText(/已移动 4 个书签/).waitFor();
