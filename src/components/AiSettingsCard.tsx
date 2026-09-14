@@ -5,7 +5,6 @@ import { loadAiConfig, normalizeBaseUrl, requestAiHostPermission, saveAiConfig, 
 import { testConnection } from '@/lib/ai/client';
 import { PRIVACY_LABEL, type Privacy } from '@/lib/ai/prompt';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -61,66 +60,60 @@ export function AiSettingsCard() {
   if (saved === undefined) return null;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>AI 服务</CardTitle>
-        <CardDescription>
-          使用任何 OpenAI 兼容接口（如 DeepSeek、通义千问、Kimi）。Key 只保存在本机，只会发给你填写的地址；费用由你的账户承担。
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form key={saved?.baseUrl ?? 'new'} onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="ai-base-url">Base URL</Label>
-            <Input
-              id="ai-base-url"
-              name="baseUrl"
-              defaultValue={saved?.baseUrl}
-              placeholder="https://api.deepseek.com/v1"
-            />
-            <p className="text-xs text-muted-foreground">填到 /v1 这一级，不用加 /chat/completions。</p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="ai-api-key">API Key</Label>
-            <Input
-              id="ai-api-key"
-              name="apiKey"
-              type="password"
-              autoComplete="off"
-              placeholder={saved ? '已保存，留空则不修改' : 'sk-…'}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="ai-model">模型名</Label>
-            <Input id="ai-model" name="model" defaultValue={saved?.model} placeholder="deepseek-chat" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="ai-privacy">发给 AI 的信息</Label>
-            <Select value={privacy} onValueChange={(v) => setPrivacy(v as Privacy)}>
-              <SelectTrigger id="ai-privacy" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(PRIVACY_LABEL) as Privacy[]).map((p) => (
-                  <SelectItem key={p} value={p}>
-                    {PRIVACY_LABEL[p]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">内网地址的书签一律不发送。</p>
-          </div>
-          {error && (
-            <p role="alert" className="text-sm text-destructive">
-              {error}
-            </p>
-          )}
+    <div className="mt-10 border-t pt-8">
+      <h2 className="text-lg font-semibold tracking-tight">AI 服务</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        使用任何 OpenAI 兼容接口（如 DeepSeek、通义千问、Kimi）。Key 只保存在本机，只会发给你填写的地址；费用由你的账户承担。
+      </p>
+      <form key={saved?.baseUrl ?? 'new'} onSubmit={(e) => void handleSubmit(e)} className="mt-6 grid gap-5 sm:grid-cols-2">
+        <div className="space-y-2 sm:col-span-2">
+          <Label htmlFor="ai-base-url">Base URL</Label>
+          <Input id="ai-base-url" name="baseUrl" defaultValue={saved?.baseUrl} placeholder="https://api.deepseek.com/v1" className="bg-card" />
+          <p className="text-xs text-muted-foreground">填到 /v1 这一级，不用加 /chat/completions。</p>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="ai-api-key">API Key</Label>
+          <Input
+            id="ai-api-key"
+            name="apiKey"
+            type="password"
+            autoComplete="off"
+            placeholder={saved ? '已保存，留空则不修改' : 'sk-…'}
+            className="bg-card"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="ai-model">模型名</Label>
+          <Input id="ai-model" name="model" defaultValue={saved?.model} placeholder="deepseek-chat" className="bg-card" />
+        </div>
+        <div className="space-y-2 sm:col-span-2">
+          <Label htmlFor="ai-privacy">发给 AI 的信息</Label>
+          <Select value={privacy} onValueChange={(v) => setPrivacy(v as Privacy)}>
+            <SelectTrigger id="ai-privacy" className="w-full bg-card">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(PRIVACY_LABEL) as Privacy[]).map((p) => (
+                <SelectItem key={p} value={p}>
+                  {PRIVACY_LABEL[p]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">内网地址的书签一律不发送。</p>
+        </div>
+        {error && (
+          <p role="alert" className="text-sm text-destructive sm:col-span-2">
+            {error}
+          </p>
+        )}
+        <div className="sm:col-span-2">
           <Button type="submit" disabled={testing}>
             {testing && <Loader2 className="animate-spin" />}
             {testing ? '正在测试连接…' : '保存并测试连接'}
           </Button>
-        </form>
-      </CardContent>
-    </Card>
+        </div>
+      </form>
+    </div>
   );
 }

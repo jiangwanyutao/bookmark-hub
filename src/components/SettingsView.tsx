@@ -4,7 +4,6 @@ import { Plus, X } from 'lucide-react';
 import { getHubCtx } from '@/lib/hubContext';
 import { addVpnHosts, removeVpnHost, type VpnHost } from '@/lib/scan/scanner';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AiSettingsCard } from './AiSettingsCard';
@@ -56,8 +55,9 @@ export function SettingsView() {
     await reload();
   }
 
+  // 两个段落用分隔线隔开，不套卡片
   return (
-    <section className="mx-auto max-w-3xl space-y-6 p-8">
+    <section className="mx-auto max-w-3xl p-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">设置</h1>
         <p className="mt-1 text-sm text-muted-foreground">配置 AI 整理服务，以及需要 VPN 才能访问的网站。</p>
@@ -65,50 +65,44 @@ export function SettingsView() {
 
       <AiSettingsCard />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>需要 VPN 的网站</CardTitle>
-          <CardDescription>
-            这些网站在当前网络下连不上时，只会标为「可能需要 VPN」，不会判为失效。适合公司内网系统和需要代理才能访问的网站。
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <form onSubmit={(e) => void handleAdd(e)} className="flex gap-2">
-            <Label htmlFor="vpn-host" className="sr-only">
-              网站域名
-            </Label>
-            <Input id="vpn-host" name="host" placeholder="wiki.company.com" aria-invalid={error !== null} />
-            <Button type="submit">
-              <Plus />
-              添加
-            </Button>
-          </form>
-          {error && (
-            <p role="alert" className="text-sm text-destructive">
-              {error}
-            </p>
-          )}
+      <div className="mt-12 border-t pt-8">
+        <h2 className="text-lg font-semibold tracking-tight">需要 VPN 的网站</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          这些网站在当前网络下连不上时，只会标为「可能需要 VPN」，不会判为失效。适合公司内网系统和需要代理才能访问的网站。
+        </p>
+        <form onSubmit={(e) => void handleAdd(e)} className="mt-5 flex gap-2">
+          <Label htmlFor="vpn-host" className="sr-only">
+            网站域名
+          </Label>
+          <Input id="vpn-host" name="host" placeholder="wiki.company.com" aria-invalid={error !== null} className="bg-card" />
+          <Button type="submit">
+            <Plus />
+            添加
+          </Button>
+        </form>
+        {error && (
+          <p role="alert" className="mt-2 text-sm text-destructive">
+            {error}
+          </p>
+        )}
 
-          {hosts?.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              还没有添加。也可以在「失效链接」「待确认」里勾选书签后点「需要 VPN」。
-            </p>
-          )}
-          {hosts && hosts.length > 0 && (
-            <ul className="divide-y rounded-lg border">
-              {hosts.map((h) => (
-                <li key={h.host} className="flex items-center justify-between gap-4 px-4 py-2 text-sm">
-                  <span className="min-w-0 truncate">{h.host}</span>
-                  <Button size="sm" variant="ghost" onClick={() => void handleRemove(h.host)} aria-label={`移除 ${h.host}`}>
-                    <X />
-                    移除
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+        {hosts?.length === 0 && (
+          <p className="mt-4 text-sm text-muted-foreground">还没有添加。也可以在「失效链接」「待确认」里勾选书签后点「需要 VPN」。</p>
+        )}
+        {hosts && hosts.length > 0 && (
+          <ul className="mt-4 divide-y rounded-xl border bg-card">
+            {hosts.map((h) => (
+              <li key={h.host} className="flex items-center justify-between gap-4 px-4 py-2 text-sm">
+                <span className="min-w-0 truncate">{h.host}</span>
+                <Button size="sm" variant="ghost" onClick={() => void handleRemove(h.host)} aria-label={`移除 ${h.host}`}>
+                  <X />
+                  移除
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </section>
   );
 }
