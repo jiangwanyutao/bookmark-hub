@@ -5,7 +5,7 @@ import { useTags } from '@/hooks/useTags';
 import { searchBookmarks, type BookmarkIndex, type TreeNode } from '@/lib/bookmarks';
 import { categorize, sectionsForTab, subfolderTabs, toNavigableUrl, type TileItem } from '@/lib/launcher';
 import { cn } from '@/lib/utils';
-import { faviconUrl } from './Favicon';
+import { faviconUrl } from '@/lib/favicon';
 import { PageHeader } from './PageHeader';
 import { Panel } from './Panel';
 

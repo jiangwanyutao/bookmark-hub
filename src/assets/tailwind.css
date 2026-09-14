@@ -77,6 +77,12 @@
   --input: oklch(1 0 0 / 18%);
   --ring: oklch(0.8 0.11 176);
   --card-shadow: 0 1px 3px oklch(0 0 0 / 0.45);
+  /* 品牌色：降饱和、降明度，避免插图在深色底上变成亮斑 */
+  --brand-mint: #5aa891;
+  --brand-mint-deep: #3d8f7c;
+  --brand-coral: #d4544f;
+  --brand-cream: oklch(0.72 0.03 85);
+  --brand-ink: oklch(0.28 0.02 50);
 }
 
 /* 首帧兜底：main.tsx 是模块脚本，执行前浏览器可能先绘制一帧，
@@ -109,6 +115,11 @@
     --input: oklch(1 0 0 / 18%);
     --ring: oklch(0.8 0.11 176);
     --card-shadow: 0 1px 3px oklch(0 0 0 / 0.45);
+    --brand-mint: #5aa891;
+    --brand-mint-deep: #3d8f7c;
+    --brand-coral: #d4544f;
+    --brand-cream: oklch(0.72 0.03 85);
+    --brand-ink: oklch(0.28 0.02 50);
   }
 }
 

@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { faviconUrl, hasRealFavicon } from '@/lib/favicon';
 import { cn } from '@/lib/utils';
 
-// 浏览器本地缓存的网站图标（favicon 权限），不发网络请求
-export const faviconUrl = (pageUrl: string, size = 64) =>
-  `${location.origin}/_favicon/?pageUrl=${encodeURIComponent(pageUrl)}&size=${size}`;
+// 按容器最大尺寸要图，小图放大会发虚
+const ICON_SIZE = 64;
 
 interface Props {
   url: string;
@@ -12,9 +12,21 @@ interface Props {
   className?: string;
 }
 
-/** 网站图标；装饰性，旁边总有标题文字，所以对读屏隐藏。换书签时用 key 重置加载失败状态。 */
+/** 网站图标；浏览器没缓存时显示首字。装饰性，旁边总有标题文字，所以对读屏隐藏。 */
 export function Favicon({ url, name, className }: Props) {
-  const [broken, setBroken] = useState(false);
+  // 记下确认有图标的网址，换网址时自然回到首字，不用 key 重置
+  const [realUrl, setRealUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    void hasRealFavicon(url, ICON_SIZE).then((ok) => {
+      if (alive && ok) setRealUrl(url);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [url]);
+
   return (
     <span
       aria-hidden
@@ -23,10 +35,10 @@ export function Favicon({ url, name, className }: Props) {
         className,
       )}
     >
-      {broken ? (
-        name.slice(0, 1).toUpperCase()
+      {realUrl === url ? (
+        <img src={faviconUrl(url, ICON_SIZE)} alt="" className="size-full object-contain" onError={() => setRealUrl(null)} />
       ) : (
-        <img src={faviconUrl(url, 32)} alt="" className="size-full object-contain" onError={() => setBroken(true)} />
+        name.slice(0, 1).toUpperCase()
       )}
     </span>
   );
