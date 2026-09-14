@@ -34,7 +34,12 @@ export const hasScanPermission = () => browser.permissions.contains(SCAN_PERMISS
 /** 必须在点击事件里第一时间调用，浏览器只在用户手势内弹出授权框。 */
 export const requestScanPermission = () => requestPermissions(SCAN_PERMISSIONS);
 
-const EXTENSION_ORIGIN = new URL(browser.runtime.getURL('/')).origin;
+// 惰性求值：Dashboard 在纯网页/预览环境（无 browser API）里加载此模块时不能在顶层访问 runtime。
+let extensionOrigin: string | undefined;
+const getExtensionOrigin = () => {
+  extensionOrigin ??= new URL(browser.runtime.getURL('/')).origin;
+  return extensionOrigin;
+};
 
 /**
  * 通过 webRequest 拿到 fetch 拿不到的信息：跳转链每一跳的状态码、网络错误码。
@@ -47,7 +52,7 @@ export function startObserving() {
 
   browser.webRequest.onBeforeRequest.addListener((details) => {
     // Dashboard 在标签页里运行，请求的 tabId 是那个标签页而不是 -1，不能用 tabId 判断来源
-    if (details.initiator !== EXTENSION_ORIGIN) return undefined;
+    if (details.initiator !== getExtensionOrigin()) return undefined;
     const tracking = trackingByUrl.get(details.url);
     if (tracking && !tracking.requestId) {
       tracking.requestId = details.requestId;
