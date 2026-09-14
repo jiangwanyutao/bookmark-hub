@@ -102,7 +102,7 @@ try {
   }, `http://${AI_HOST}:${port}/v1`);
   await page.reload();
 
-  await page.getByRole('button', { name: '智能整理' }).click();
+  await page.getByRole('navigation', { name: '主导航' }).getByRole('button', { name: '智能整理' }).click();
   await page.getByRole('checkbox', { name: /^其他书签/ }).click();
   await page.getByRole('button', { name: '开始整理' }).click();
   await page.getByText('已完成，去右侧预览并确认').waitFor();

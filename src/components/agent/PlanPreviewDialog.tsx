@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { ChevronRight } from 'lucide-react';
 import type { TreeNode } from '@/lib/bookmarks';
 import { planToIntents } from '@/lib/agent/applyPlan';
 import type { OrganizePlan } from '@/lib/agent/plan';
@@ -68,8 +69,9 @@ export function PlanPreviewDialog({ open, onOpenChange, plan, roots, inScope, bo
             </ul>
             <div className="max-h-64 space-y-1 overflow-auto">
               {byCategory.map(([category, ids]) => (
-                <details key={category} className="rounded-md border px-3 py-1.5">
-                  <summary className="cursor-pointer">
+                <details key={category} className="group rounded-md border px-3 py-1.5">
+                  <summary className="flex cursor-pointer items-center gap-1.5">
+                    <ChevronRight className="size-4 text-muted-foreground transition-transform group-open:rotate-90" />
                     {category}（{ids.length}）
                   </summary>
                   <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">

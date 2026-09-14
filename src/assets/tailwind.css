@@ -2,35 +2,39 @@
 @import "tw-animate-css";
 @source "../../node_modules/streamdown/dist/*.js";
 
-/* 灯塔品牌暖色主题：配色取自 logo（薄荷绿 #6ED3B7、珊瑚红 #F9615C、奶油色）。
-   亮色：薄荷调近白底 + 深薄荷主色（白字 5.0）+ 冷墨文字；暗色：深青底 + 薄荷主色（深字 10.1）。
-   中性色一律朝主色色相轻微着色（不用暖黄底，不用纯白纯黑）。
-   暗色跟随系统（Tailwind v4 默认的 dark 变体即 prefers-color-scheme）。
-   改色前先算 WCAG 对比度（文字 ≥ 4.5），见 docs/design-system.md。 */
+/* 深浅色由 <html data-theme="light|dark"> 决定（src/lib/theme.ts 启动时设置，默认跟随系统）。 */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* 桌面工具风（参考 app-shell-ui App Mode）+ 灯塔品牌薄荷主色：
+   柔灰画布 → 侧栏略深 → 白色卡片浮起；层次靠 1px 细描边，阴影极轻。
+   中性色朝主色色相轻微着色。改色前先算 WCAG 对比度（文字 ≥ 4.5），见 docs/design-system.md。 */
 :root {
+  color-scheme: light;
   --radius: 0.75rem;
-  --background: oklch(0.975 0.008 180);
-  --foreground: oklch(0.22 0.015 200);
-  --card: oklch(0.995 0.004 180);
-  --card-foreground: oklch(0.22 0.015 200);
-  --popover: oklch(0.995 0.004 180);
-  --popover-foreground: oklch(0.22 0.015 200);
+  --background: oklch(0.968 0.005 190);
+  --sidebar: oklch(0.95 0.007 190);
+  --foreground: oklch(0.22 0.012 200);
+  --card: oklch(0.995 0.002 190);
+  --card-foreground: oklch(0.22 0.012 200);
+  --popover: oklch(0.995 0.002 190);
+  --popover-foreground: oklch(0.22 0.012 200);
   --primary: oklch(0.52 0.1 180);
   --primary-foreground: oklch(0.99 0.005 180);
-  --secondary: oklch(0.95 0.01 185);
-  --secondary-foreground: oklch(0.22 0.015 200);
-  --muted: oklch(0.95 0.01 185);
-  --muted-foreground: oklch(0.5 0.015 200);
-  /* 薄荷浅底：选中、悬停、品牌区块 */
-  --accent: oklch(0.94 0.045 175);
+  --secondary: oklch(0.955 0.006 190);
+  --secondary-foreground: oklch(0.22 0.012 200);
+  --muted: oklch(0.955 0.006 190);
+  --muted-foreground: oklch(0.48 0.012 200);
+  /* 选中 / 悬停：主色 12% 洗进卡片色 */
+  --accent: color-mix(in srgb, var(--primary) 12%, var(--card));
   --accent-foreground: oklch(0.4 0.08 182);
   /* 珊瑚浅底：失效等需要注意但不危险的提醒 */
   --coral: oklch(0.95 0.03 35);
   --coral-foreground: oklch(0.5 0.17 28);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.9 0.012 185);
-  --input: oklch(0.9 0.012 185);
+  --border: oklch(0.9 0.008 190);
+  --input: oklch(0.9 0.008 190);
   --ring: oklch(0.52 0.1 180);
+  --card-shadow: 0 1px 2px oklch(0.2 0.02 200 / 0.05), 0 1px 3px oklch(0.2 0.02 200 / 0.04);
   /* logo 原色，只给插图用，不用于文字 */
   --brand-mint: #6ed3b7;
   --brand-mint-deep: #3fb597;
@@ -39,28 +43,42 @@
   --brand-ink: #3a2e28;
 }
 
+/* 深色：柔和炭灰（不用纯黑），卡片比画布亮一档 */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: oklch(0.215 0.008 200);
+  --sidebar: oklch(0.19 0.008 200);
+  --foreground: oklch(0.96 0.005 200);
+  --card: oklch(0.265 0.01 200);
+  --card-foreground: oklch(0.96 0.005 200);
+  --popover: oklch(0.265 0.01 200);
+  --popover-foreground: oklch(0.96 0.005 200);
+  --primary: oklch(0.8 0.11 176);
+  --primary-foreground: oklch(0.2 0.03 200);
+  --secondary: oklch(0.3 0.01 200);
+  --secondary-foreground: oklch(0.96 0.005 200);
+  --muted: oklch(0.3 0.01 200);
+  --muted-foreground: oklch(0.72 0.01 200);
+  --accent: color-mix(in srgb, var(--primary) 22%, var(--card));
+  --accent-foreground: oklch(0.88 0.08 176);
+  --coral: oklch(0.33 0.07 30);
+  --coral-foreground: oklch(0.88 0.07 35);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.8 0.11 176);
+  --card-shadow: 0 1px 3px oklch(0 0 0 / 0.45);
+}
+
+/* 脚本设置 data-theme 之前（首帧）也按系统显示，避免深色下闪白 */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: oklch(0.19 0.018 210);
-    --foreground: oklch(0.96 0.01 85);
-    --card: oklch(0.235 0.022 205);
-    --card-foreground: oklch(0.96 0.01 85);
-    --popover: oklch(0.235 0.022 205);
-    --popover-foreground: oklch(0.96 0.01 85);
-    --primary: oklch(0.8 0.11 176);
-    --primary-foreground: oklch(0.2 0.03 200);
-    --secondary: oklch(0.29 0.022 205);
-    --secondary-foreground: oklch(0.96 0.01 85);
-    --muted: oklch(0.29 0.022 205);
-    --muted-foreground: oklch(0.74 0.02 80);
-    --accent: oklch(0.33 0.05 185);
-    --accent-foreground: oklch(0.88 0.08 176);
-    --coral: oklch(0.33 0.07 30);
-    --coral-foreground: oklch(0.88 0.07 35);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.8 0.11 176);
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --background: oklch(0.215 0.008 200);
+    --sidebar: oklch(0.19 0.008 200);
+    --foreground: oklch(0.96 0.005 200);
+    --card: oklch(0.265 0.01 200);
+    --border: oklch(1 0 0 / 9%);
   }
 }
 
@@ -70,7 +88,9 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --shadow-card: var(--card-shadow);
   --color-background: var(--background);
+  --color-sidebar: var(--sidebar);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
@@ -95,6 +115,16 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    /* 滚动条跟随主题：细、低对比，不用系统原生粗灰条 */
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--muted-foreground) 35%, transparent) transparent;
+  }
+  /* 去掉 <summary> 原生三角，由组件自己画箭头 */
+  summary {
+    list-style: none;
+  }
+  summary::-webkit-details-marker {
+    display: none;
   }
   body {
     @apply bg-background text-foreground;
