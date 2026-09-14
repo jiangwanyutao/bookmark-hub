@@ -1,0 +1,19 @@
+<!doctype html>
+<!--
+  仅供开发预览：WXT 的 vite 开发服务器以项目根为 root，会在 "/" 提供此文件，
+  让扩展的仪表盘界面能在普通网页（如 v0 预览）里渲染。
+  它加载与扩展相同的入口 main.tsx；非扩展环境下 useBookmarkTree 会自动喂入示例书签。
+  WXT 只打包 src/entrypoints/ 下的入口，此文件不会进入扩展产物。
+-->
+<html lang="zh-CN" class="bg-background">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bookmark Hub</title>
+    <link rel="icon" type="image/png" href="/icon-32.png" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/entrypoints/dashboard/main.tsx"></script>
+  </body>
+</html>

@@ -10,7 +10,20 @@ export function useBookmarkTree() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const { bookmarks } = browser;
+    const bookmarks = browser?.bookmarks;
+
+    // 非扩展环境（v0 预览、纯网页）没有 chrome.bookmarks API，喂入示例数据以便预览界面。
+    // 真实扩展里该 API 一定存在，此分支不会触发。
+    if (!bookmarks?.getTree) {
+      let cancelled = false;
+      void import('../lib/testing/sampleTree').then(({ sampleTree }) => {
+        if (!cancelled) setTree(sampleTree);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
+
     let importing = false;
     let timer: number | undefined;
 
