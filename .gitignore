@@ -4,3 +4,9 @@ node_modules
 stats.html
 *.log
 docs/PRD.html
+
+# 本机 AI 助手的 skill（第三方文件，按需自行安装：npx skills add nutlope/hallmark）
+.agents/
+.claude/
+skills-lock.json
+.hallmark/
