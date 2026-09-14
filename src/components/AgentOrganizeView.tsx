@@ -63,7 +63,7 @@ export function AgentOrganizeView({ index, roots, onOpenSettings }: Props) {
   if (!config) {
     return (
       <section className="mx-auto max-w-3xl space-y-4 p-8">
-        <h1 className="text-2xl font-semibold">智能整理</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">智能整理</h1>
         <p className="text-sm text-muted-foreground">
           智能体会和你对话，梳理出一套分类体系并按它重排书签。先在设置里配置一个支持工具调用的 OpenAI 兼容服务。
         </p>
@@ -75,7 +75,7 @@ export function AgentOrganizeView({ index, roots, onOpenSettings }: Props) {
   return (
     <section className="space-y-6 p-8">
       <div>
-        <h1 className="text-2xl font-semibold">智能整理</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">智能整理</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           智能体按你勾选的范围提出分类体系，你确认后才会移动书签，执行前自动创建恢复点。当前发送给 AI：{PRIVACY_LABEL[config.privacy]}。
         </p>

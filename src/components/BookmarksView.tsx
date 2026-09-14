@@ -33,9 +33,10 @@ export function BookmarksView({ roots, index, query, folderId, onSelectFolder }:
         onSelect={onSelectFolder}
       />
       <section className="flex min-h-0 min-w-0 flex-col">
-        <p className="border-b px-4 py-2 text-sm text-muted-foreground">
-          {visible.length.toLocaleString('zh-CN')} 个书签
-        </p>
+        <div className="flex h-10 shrink-0 items-center border-b px-4 text-sm text-muted-foreground">
+          <span className="font-medium tabular-nums text-foreground">{visible.length.toLocaleString('zh-CN')}</span>
+          <span className="ml-1">个书签</span>
+        </div>
         <BookmarkList bookmarks={visible} selectedId={selectedId} onSelect={setSelectedId} />
       </section>
       <BookmarkDetail

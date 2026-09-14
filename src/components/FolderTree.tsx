@@ -45,7 +45,7 @@ export function FolderTree({ roots, ...shared }: Shared & { roots: TreeNode[] })
   if (!root) return null;
 
   return (
-    <nav aria-label="文件夹" className="overflow-auto border-r p-2">
+    <nav aria-label="文件夹" className="overflow-auto border-r bg-muted/30 p-2">
       <FolderButton
         active={shared.selectedId === null}
         icon={<Library />}

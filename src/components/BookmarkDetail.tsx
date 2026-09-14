@@ -30,8 +30,8 @@ export function BookmarkDetail({ bookmark, folders, tags, onSaveTags }: Props) {
   ];
 
   return (
-    <aside className="overflow-auto border-l p-5">
-      <h2 className="font-semibold break-words">{bookmark.title || '（无标题）'}</h2>
+    <aside className="overflow-auto border-l bg-muted/30 p-5">
+      <h2 className="text-base font-semibold break-words tracking-tight">{bookmark.title || '（无标题）'}</h2>
       <Separator className="my-4" />
       <dl className="space-y-3 text-sm">
         {fields.map((f) => (

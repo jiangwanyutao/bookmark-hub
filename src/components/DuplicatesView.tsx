@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Trash2 } from 'lucide-react';
+import { CopyCheck, Trash2 } from 'lucide-react';
 import type { BookmarkIndex } from '@/lib/bookmarks';
 import { findDuplicateGroups, redundantCount, type DuplicateGroup, type DuplicateTier } from '@/lib/duplicates';
 import type { Intent } from '@/lib/history';
@@ -32,14 +32,22 @@ export function DuplicatesView({ index }: { index: BookmarkIndex }) {
   const autoIntents = autoGroups.flatMap((g) => removeOthers(g, g.defaultKeepId!));
 
   if (groups.length === 0) {
-    return <p className="p-8 text-sm text-muted-foreground">没有发现重复书签。</p>;
+    return (
+      <div className="flex min-h-full flex-col items-center justify-center gap-3 p-8 text-center">
+        <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+          <CopyCheck className="size-6" />
+        </div>
+        <p className="text-sm font-medium">没有发现重复书签</p>
+        <p className="max-w-xs text-sm text-muted-foreground">你的书签里没有重复的网址，很干净。</p>
+      </div>
+    );
   }
 
   return (
     <section className="mx-auto max-w-4xl space-y-6 p-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">重复书签</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">重复书签</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {groups.length} 组，共 {redundantCount(groups)} 条多余。跨目录和疑似重复的需要你逐组选择保留哪一条。
           </p>

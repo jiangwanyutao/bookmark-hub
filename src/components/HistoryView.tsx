@@ -85,7 +85,7 @@ export function HistoryView() {
     <section className="mx-auto max-w-3xl space-y-8 p-8">
       <div className="space-y-4">
         <div>
-          <h1 className="text-2xl font-semibold">操作记录</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">操作记录</h1>
           <p className="mt-1 text-sm text-muted-foreground">撤销时会跳过你之后在浏览器里手动改过的书签。</p>
         </div>
 
@@ -121,7 +121,7 @@ export function HistoryView() {
 
       <div className="space-y-4">
         <div>
-          <h2 className="text-lg font-semibold">恢复点</h2>
+          <h2 className="text-lg font-semibold tracking-tight">恢复点</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             批量操作前自动创建，保留最近 20 份及 30 天内的全部。恢复会先展示差异，不会删除之后新增的书签，恢复本身也可以撤销。
           </p>

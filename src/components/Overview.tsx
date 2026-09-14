@@ -96,8 +96,8 @@ export function Overview({ index, roots, barId, onNavigate, onOpenFolder }: Prop
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardDescription>Bookmark Health</CardDescription>
-            <CardTitle className="text-4xl tabular-nums">
+            <CardDescription className="text-xs font-medium uppercase tracking-wide">Bookmark Health</CardDescription>
+            <CardTitle className="text-4xl font-semibold tabular-nums tracking-tight">
               {score}
               <span className="text-base font-normal text-muted-foreground"> / 100</span>
             </CardTitle>
@@ -155,8 +155,10 @@ export function Overview({ index, roots, barId, onNavigate, onOpenFolder }: Prop
               {rects.map((r) => {
                 const rank = tiles.findIndex((t) => t.id === r.id);
                 const tile = tiles[rank]!;
-                // 越大的目录颜色越深
-                const shade = 95 - (rank / Math.max(tiles.length - 1, 1)) * 45;
+                // 越大的目录蓝色越浓：在 sRGB 空间由主色向卡片色递减，保持纯蓝色阶不跑色相
+                const t = rank / Math.max(tiles.length - 1, 1);
+                const mix = Math.round(92 - t * 70);
+                const onDark = mix >= 52;
                 return (
                   <div
                     key={r.id}
@@ -173,8 +175,8 @@ export function Overview({ index, roots, barId, onNavigate, onOpenFolder }: Prop
                       disabled={!tile.folderId}
                       onClick={() => tile.folderId && onOpenFolder(tile.folderId)}
                       title={`${tile.name}：${tile.value} 个书签`}
-                      className="flex size-full flex-col items-start overflow-hidden rounded-sm p-2 text-left text-xs text-primary-foreground outline-none hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default disabled:hover:opacity-100"
-                      style={{ backgroundColor: `color-mix(in oklch, var(--primary) ${shade}%, var(--muted))` }}
+                      className={`flex size-full flex-col items-start overflow-hidden rounded-sm p-2 text-left text-xs outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default disabled:hover:opacity-100 ${onDark ? 'text-primary-foreground' : 'text-foreground'}`}
+                      style={{ backgroundColor: `color-mix(in srgb, var(--primary) ${mix}%, var(--card))` }}
                     >
                       <span className="w-full truncate font-medium">{tile.name}</span>
                       <span className="tabular-nums opacity-80">{formatCount(tile.value)}</span>
@@ -187,13 +189,14 @@ export function Overview({ index, roots, barId, onNavigate, onOpenFolder }: Prop
         </CardContent>
       </Card>
 
-      <Card className="max-w-xl">
+      <Card>
         <CardHeader>
-          <CardTitle>收藏最多��网站</CardTitle>
+          <CardTitle>收藏最多的网站</CardTitle>
+          <CardDescription>按同一网站下的书签数量排序。</CardDescription>
         </CardHeader>
         <CardContent>
           {domains.length > 0 ? (
-            <ol className="space-y-1">
+            <ol className="grid gap-1 sm:grid-cols-2 sm:gap-x-6">
               {domains.map((d) => (
                 <li key={d.domain} className="relative flex justify-between rounded-md px-3 py-1.5 text-sm">
                   <span
@@ -201,7 +204,7 @@ export function Overview({ index, roots, barId, onNavigate, onOpenFolder }: Prop
                     className="absolute inset-y-0 left-0 rounded-md bg-primary/10"
                     style={{ width: `${(d.count / maxCount) * 100}%` }}
                   />
-                  <span className="relative">{d.domain}</span>
+                  <span className="relative truncate pr-3">{d.domain}</span>
                   <span className="relative text-muted-foreground tabular-nums">{formatCount(d.count)}</span>
                 </li>
               ))}

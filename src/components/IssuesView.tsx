@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { EyeOff, ExternalLink, Globe, RefreshCw, Trash2, Wand2 } from 'lucide-react';
+import { EyeOff, ExternalLink, Globe, RefreshCw, ScanSearch, Trash2, Wand2 } from 'lucide-react';
 import type { Bookmark } from '@/lib/bookmarks';
 import { hostOf, type FailReason } from '@/lib/scan/classify';
 import { collectIssues, FAIL_REASON_LABEL, type Issue, type IssueKind } from '@/lib/scan/issues';
@@ -155,13 +155,21 @@ export function IssuesView({ kind, bookmarks }: { kind: IssueKind; bookmarks: Bo
     });
 
   if (results.size === 0) {
-    return <p className="p-8 text-sm text-muted-foreground">还没有扫描过。去「健康扫描」开始第一次扫描。</p>;
+    return (
+      <div className="flex min-h-full flex-col items-center justify-center gap-3 p-8 text-center">
+        <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+          <ScanSearch className="size-6" />
+        </div>
+        <p className="text-sm font-medium">还没有扫描过</p>
+        <p className="max-w-xs text-sm text-muted-foreground">去「健康扫描」开始第一次扫描，结果会显示在这里。</p>
+      </div>
+    );
   }
 
   return (
     <section className="mx-auto max-w-4xl space-y-5 p-8">
       <div>
-        <h1 className="text-2xl font-semibold">{config.title}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{config.title}</h1>
         <p className="mt-1 text-sm text-muted-foreground">{config.description}</p>
       </div>
 

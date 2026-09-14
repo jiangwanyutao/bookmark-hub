@@ -58,7 +58,10 @@ export function SettingsView() {
 
   return (
     <section className="mx-auto max-w-3xl space-y-6 p-8">
-      <h1 className="text-2xl font-semibold">设置</h1>
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">设置</h1>
+        <p className="mt-1 text-sm text-muted-foreground">配置 AI 整理服务，以及需要 VPN 才能访问的网站。</p>
+      </div>
 
       <AiSettingsCard />
 
