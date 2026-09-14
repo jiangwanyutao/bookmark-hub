@@ -52,7 +52,7 @@ function Steps({ steps }: { steps: ToolItem[] }) {
             label={step.label}
             description={step.detail}
             status={step.status === 'running' ? 'active' : 'complete'}
-            className={cn(step.status === 'error' && 'text-destructive')}
+            className={cn(step.status === 'error' && 'text-destructive', step.status === 'running' && '[&_svg]:motion-safe:animate-spin')}
           />
         ))}
       </ChainOfThoughtContent>
