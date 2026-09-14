@@ -2,50 +2,65 @@
 @import "tw-animate-css";
 @source "../../node_modules/streamdown/dist/*.js";
 
-/* Modern Minimal 主题：蓝色主色 + 纯灰阶中性色，圆角 0.375rem，无渐变无装饰色块。
-   暗色跟随系统（Tailwind v4 默认的 dark 变体即 prefers-color-scheme）。 */
+/* 灯塔品牌暖色主题：配色取自 logo（薄荷绿 #6ED3B7、珊瑚红 #F9615C、奶油色）。
+   亮色：薄荷调近白底 + 深薄荷主色（白字 5.0）+ 冷墨文字；暗色：深青底 + 薄荷主色（深字 10.1）。
+   中性色一律朝主色色相轻微着色（不用暖黄底，不用纯白纯黑）。
+   暗色跟随系统（Tailwind v4 默认的 dark 变体即 prefers-color-scheme）。
+   改色前先算 WCAG 对比度（文字 ≥ 4.5），见 docs/design-system.md。 */
 :root {
-  --radius: 0.375rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.6231 0.188 259.8145);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.951 0.026 258);
-  --accent-foreground: oklch(0.4341 0.171 262);
+  --radius: 0.75rem;
+  --background: oklch(0.975 0.008 180);
+  --foreground: oklch(0.22 0.015 200);
+  --card: oklch(0.995 0.004 180);
+  --card-foreground: oklch(0.22 0.015 200);
+  --popover: oklch(0.995 0.004 180);
+  --popover-foreground: oklch(0.22 0.015 200);
+  --primary: oklch(0.52 0.1 180);
+  --primary-foreground: oklch(0.99 0.005 180);
+  --secondary: oklch(0.95 0.01 185);
+  --secondary-foreground: oklch(0.22 0.015 200);
+  --muted: oklch(0.95 0.01 185);
+  --muted-foreground: oklch(0.5 0.015 200);
+  /* 薄荷浅底：选中、悬停、品牌区块 */
+  --accent: oklch(0.94 0.045 175);
+  --accent-foreground: oklch(0.4 0.08 182);
+  /* 珊瑚浅底：失效等需要注意但不危险的提醒 */
+  --coral: oklch(0.95 0.03 35);
+  --coral-foreground: oklch(0.5 0.17 28);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.6231 0.188 259.8145);
+  --border: oklch(0.9 0.012 185);
+  --input: oklch(0.9 0.012 185);
+  --ring: oklch(0.52 0.1 180);
+  /* logo 原色，只给插图用，不用于文字 */
+  --brand-mint: #6ed3b7;
+  --brand-mint-deep: #3fb597;
+  --brand-coral: #f9615c;
+  --brand-cream: #fef6e4;
+  --brand-ink: #3a2e28;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.6231 0.188 259.8145);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.371 0.096 259);
-    --accent-foreground: oklch(0.882 0.057 254);
+    --background: oklch(0.19 0.018 210);
+    --foreground: oklch(0.96 0.01 85);
+    --card: oklch(0.235 0.022 205);
+    --card-foreground: oklch(0.96 0.01 85);
+    --popover: oklch(0.235 0.022 205);
+    --popover-foreground: oklch(0.96 0.01 85);
+    --primary: oklch(0.8 0.11 176);
+    --primary-foreground: oklch(0.2 0.03 200);
+    --secondary: oklch(0.29 0.022 205);
+    --secondary-foreground: oklch(0.96 0.01 85);
+    --muted: oklch(0.29 0.022 205);
+    --muted-foreground: oklch(0.74 0.02 80);
+    --accent: oklch(0.33 0.05 185);
+    --accent-foreground: oklch(0.88 0.08 176);
+    --coral: oklch(0.33 0.07 30);
+    --coral-foreground: oklch(0.88 0.07 35);
     --destructive: oklch(0.704 0.191 22.216);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.6231 0.188 259.8145);
+    --ring: oklch(0.8 0.11 176);
   }
 }
 
@@ -69,6 +84,8 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-coral: var(--coral);
+  --color-coral-foreground: var(--coral-foreground);
   --color-destructive: var(--destructive);
   --color-border: var(--border);
   --color-input: var(--input);
@@ -82,5 +99,11 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
+  }
+  /* Tailwind v4 默认按钮是箭头光标，可点击的元素统一用手型 */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary {
+    cursor: pointer;
   }
 }

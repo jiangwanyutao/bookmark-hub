@@ -83,7 +83,7 @@ export function App() {
 
   return (
     <div className="grid h-screen grid-cols-[224px_1fr] grid-rows-[60px_1fr]">
-      <header className="col-span-2 flex items-center gap-6 border-b bg-card px-5">
+      <header className="col-span-2 flex items-center gap-6 border-b bg-background px-5">
         <span className="flex w-[184px] shrink-0 items-center gap-2.5 text-[15px] font-semibold tracking-tight">
           <img src="/icon-48.png" alt="" className="size-7 rounded-md" />
           Bookmark Hub
@@ -105,10 +105,10 @@ export function App() {
         </div>
       </header>
 
-      <nav aria-label="主导航" className="flex flex-col gap-5 overflow-auto border-r bg-card px-3 py-4">
+      <nav aria-label="主导航" className="flex flex-col gap-5 overflow-auto border-r bg-background px-3 py-4">
         {NAV_GROUPS.map((group) => (
           <div key={group.label} className="flex flex-col gap-0.5">
-            <p className="px-3 pb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            <p className="px-3 pb-1.5 text-xs font-medium text-muted-foreground">
               {group.label}
             </p>
             {group.items.map(({ view: target, label, icon: Icon }) => {
@@ -119,7 +119,7 @@ export function App() {
                   variant="ghost"
                   className={
                     active
-                      ? 'h-9 justify-start gap-2.5 bg-secondary font-medium [&_svg]:text-primary'
+                      ? 'h-9 justify-start gap-2.5 bg-accent font-medium text-accent-foreground hover:bg-accent hover:text-accent-foreground'
                       : 'h-9 justify-start gap-2.5 font-normal text-muted-foreground hover:text-foreground'
                   }
                   onClick={() => setView(target)}
