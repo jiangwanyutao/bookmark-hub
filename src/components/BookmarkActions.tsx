@@ -44,7 +44,7 @@ export function BookmarkActions({ bookmark, folders }: Props) {
 
   return (
     <>
-      <div className="mt-5 flex flex-wrap gap-2">
+      <div className="mt-5 grid grid-cols-2 gap-2">
         {OPENABLE.test(bookmark.url) && (
           <Button asChild size="sm">
             <a href={bookmark.url} target="_blank" rel="noreferrer">

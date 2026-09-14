@@ -30,7 +30,7 @@ function FolderButton({
     <Button
       variant="ghost"
       size="sm"
-      className={cn('min-w-0 flex-1 justify-start font-normal', active && 'bg-accent text-accent-foreground')}
+      className={cn('min-w-0 flex-1 justify-start font-normal', active && 'bg-accent font-medium text-accent-foreground hover:bg-accent')}
       onClick={onClick}
     >
       {icon}
@@ -46,6 +46,7 @@ export function FolderTree({ roots, ...shared }: Shared & { roots: TreeNode[] })
 
   return (
     <nav aria-label="文件夹" className="overflow-auto border-r bg-muted/30 p-2">
+      <p className="px-2 pt-2 pb-1.5 text-xs font-medium text-muted-foreground">目录</p>
       <FolderButton
         active={shared.selectedId === null}
         icon={<Library />}
