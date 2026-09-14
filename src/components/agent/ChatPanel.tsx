@@ -28,9 +28,9 @@ const STATUS_LABEL: Record<OrganizeState['status'], string> = {
 const STATUS_DOT: Record<OrganizeState['status'], string> = {
   idle: 'bg-muted-foreground',
   running: 'bg-primary motion-safe:animate-pulse',
-  waiting: 'bg-amber-500',
+  waiting: 'bg-warn-indicator',
   finished: 'bg-primary',
-  limit: 'bg-amber-500',
+  limit: 'bg-warn-indicator',
   error: 'bg-destructive',
 };
 
@@ -165,7 +165,7 @@ export function ChatPanel({ state, roots, countByFolder, onStart, onSend, onStop
           <span aria-hidden className={cn('size-2 rounded-full', STATUS_DOT[state.status])} />
           {STATUS_LABEL[state.status]}
         </span>
-        <span className="tabular-nums">已用 {state.tokens.toLocaleString('zh-CN')} tokens</span>
+        <span className="font-mono tabular-nums">已用 {state.tokens.toLocaleString('zh-CN')} tokens</span>
       </div>
       <Conversation className="min-h-0" aria-live="polite">
         <ConversationContent className="gap-4">

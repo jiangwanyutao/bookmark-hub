@@ -47,7 +47,7 @@ export function BookmarkList({ bookmarks, selectedId, onSelect }: Props) {
               key={b.id}
               aria-current={selected || undefined}
               className={cn(
-                'absolute inset-x-0 top-0 flex items-center gap-3 border-b px-5 text-left outline-none',
+                'group absolute inset-x-0 top-0 flex items-center gap-3 border-b px-5 text-left outline-none',
                 'hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
                 selected && 'bg-accent text-accent-foreground shadow-[inset_2px_0_0_var(--primary)] hover:bg-accent',
               )}
@@ -57,7 +57,7 @@ export function BookmarkList({ bookmarks, selectedId, onSelect }: Props) {
               <Favicon url={b.url} name={b.title || b.domain || b.url} className="size-5 rounded" />
               <span className="flex min-w-0 flex-col">
                 <span className="truncate text-sm font-medium">{b.title || b.url}</span>
-                <span className={cn('truncate text-xs', selected ? 'text-accent-foreground' : 'text-muted-foreground')}>
+                <span className={cn('truncate text-xs', selected ? 'text-accent-foreground' : 'text-muted-foreground group-hover:text-accent-foreground')}>
                   {b.domain || b.url.split(':')[0]} · {b.folderPath}
                 </span>
               </span>

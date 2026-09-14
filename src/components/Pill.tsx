@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 // 状态用小药丸表达，颜色只做辅助，文字本身说明状态
 const TONE = {
   ok: 'bg-accent text-accent-foreground',
-  warn: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200',
+  warn: 'bg-warn text-warn-foreground',
   danger: 'bg-coral text-coral-foreground',
   neutral: 'bg-muted text-muted-foreground',
 } as const;

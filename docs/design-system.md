@@ -27,8 +27,11 @@
 | `--primary` / `-foreground` | 深薄荷 `#007b6b` / 白 | 薄荷 `#65d5bb` / 深青 | 主按钮、选中、进度、分段控件选中段：亮 5.0 / 暗 10.1 |
 | `--accent` / `-foreground` | 主色 12% 洗进卡片 / 深薄荷字 | 主色 22% / 浅薄荷字 | 侧栏选中、列表选中：亮 7.3 / 暗 6.6；选中项里的数量、副标题都用 `text-accent-foreground` |
 | `--coral` / `-foreground` | 珊瑚浅底 / 深珊瑚字 | 深珊瑚底 / 浅珊瑚字 | 失效等提醒 |
-| `--border` | `#d8e0df` | 白 9% | 层次主要靠 1px 细描边 |
-| `--card-shadow`（`shadow-card`） | 极轻两层 | `0 1px 3px` 黑 45% | 卡片可有可无的轻阴影 |
+| `--warn` / `-foreground` | 琥珀浅底 / 深琥珀字 | 深琥珀底 / 浅琥珀字 | 重定向、疑似重复等「看一眼」：亮 5.8 / 暗 8.6（`Pill tone="warn"`） |
+| `--warn-indicator` | `#be7100` | `#e8aa4e` | 状态点等小图形：对卡片 亮 3.7 / 暗 7.5。**不要用 `amber-*` 等色板色** |
+| `--destructive` | `#d01c25` | 默认红 | 危险操作：红字对画布 亮 4.9 |
+| `--border` | `#c9d4d3` | 白 14% | 1px 描边：对卡片 亮 1.5 / 暗 1.56（卡片与画布几乎同色，边界靠它） |
+| `--card-shadow`（`shadow-card`） | 两层 8% / 6% | `0 1px 3px` 黑 45% | 补一点浮起感 |
 | `--brand-*` | logo 原色 | 同 | **只给插图用** |
 
 规则：文字 ≥ 4.5:1、图形 ≥ 3:1，**改色前先算**（oklch → sRGB → WCAG）。一个主色贯穿按钮、选中、进度、开关。状态不只靠颜色，配文字。
@@ -65,7 +68,9 @@
 
 ## 5. 字体、间距、交互
 
-- 字体：系统字体栈（`--font-sans`），不引入 Web 字体。字号：页头 `text-xl`，面板标题 `text-sm font-semibold`，正文 `text-sm`，辅助 `text-xs`，不小于 12px；列中数字 `tabular-nums`。
+- 字体：系统字体栈（`--font-sans`），不引入 Web 字体；网址、token 数等要分清 l/1/I、0/O 的内容用 `font-mono`（`--font-mono`）。字号：页头 `text-xl`，面板标题 `text-sm font-semibold`，正文 `text-sm`，辅助 `text-xs`，不小于 12px；列中数字 `tabular-nums`。
+- 字号例外（有意为之，别「修」掉）：AI 对话消息正文 `text-base`（16px），因为是逐字阅读而非扫读；顶栏品牌名 `text-[15px]`，全站仅此一处。
+- 标题只放名称，条数等会变的数字放副标题或面板 meta，避免标题宽度跳动。
 - 框架：顶栏 56px ｜ 侧栏 232px（带待处理数量）｜ 内容区 `px-6 py-5`，块间距 `gap-4`；圆角 `--radius: 0.75rem`。
 - 滚动条：全局细滚动条，颜色跟随主题。
 - 动效：颜色 / 透明度 / transform 150–250ms，不用 `transition-all`；`CountUp`、书本抬起、按压下沉都尊重「减少动态效果」。

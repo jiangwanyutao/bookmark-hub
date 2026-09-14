@@ -212,7 +212,7 @@ export function IssuesView({ kind, bookmarks }: { kind: IssueKind; bookmarks: Bo
 
   return (
     <div className="flex h-full min-h-[560px] flex-col gap-4 px-6 py-5">
-      <PageHeader title={`${config.title} ${active.length}`} subtitle={config.description} actions={filter} />
+      <PageHeader title={config.title} subtitle={`共 ${active.length} 条。${config.description}`} actions={filter} />
 
       {shown.length === 0 ? (
         <Panel className="shrink-0" bodyClassName="flex items-center gap-3 p-5 text-sm">
@@ -335,7 +335,7 @@ function IssueRow({
       <Favicon key={bookmark.id} url={bookmark.url} name={bookmark.title || bookmark.url} className="mt-0.5 size-5 rounded" />
       <label htmlFor={id} className="min-w-0 flex-1 cursor-pointer space-y-0.5">
         <span className="block truncate text-sm font-medium">{bookmark.title || bookmark.url}</span>
-        <span className="block text-xs break-all text-muted-foreground">{bookmark.url}</span>
+        <span className="block font-mono text-xs break-all text-muted-foreground">{bookmark.url}</span>
         {result.redirectTo && <span className="block text-xs break-all text-primary">→ {result.redirectTo}</span>}
         <span className="flex flex-wrap items-center gap-2 pt-1 text-xs text-muted-foreground">
           {result.failReason && (

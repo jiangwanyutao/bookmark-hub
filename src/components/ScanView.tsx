@@ -17,7 +17,7 @@ type StatusKey = 'healthy' | 'redirected' | 'broken' | 'pending' | 'skipped' | '
 // 状态颜色只上在小圆点和分段条上，旁边总有文字和数字
 const STATUS: { key: StatusKey; label: string; hint: string; icon: Icon; dot: string }[] = [
   { key: 'healthy', label: '正常', hint: '能正常打开', icon: CircleCheck, dot: 'bg-primary' },
-  { key: 'redirected', label: '网址已搬家', hint: '永久跳转到了新地址', icon: CornerUpRight, dot: 'bg-amber-500' },
+  { key: 'redirected', label: '网址已搬家', hint: '永久跳转到了新地址', icon: CornerUpRight, dot: 'bg-warn-indicator' },
   { key: 'broken', label: '失效', hint: '网页已经打不开', icon: Link2Off, dot: 'bg-destructive' },
   { key: 'pending', label: '待确认', hint: '可能需要登录、被限流或需要 VPN', icon: CircleHelp, dot: 'bg-muted-foreground/60' },
   { key: 'skipped', label: '已跳过', hint: '内网地址和带登录凭据的链接', icon: CircleMinus, dot: 'bg-muted-foreground/30' },

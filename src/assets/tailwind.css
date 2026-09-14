@@ -6,8 +6,8 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /* 桌面工具风（参考 app-shell-ui App Mode）+ 灯塔品牌薄荷主色：
-   柔灰画布 → 侧栏略深 → 白色卡片浮起；层次靠 1px 细描边，阴影极轻。
-   中性色朝主色色相轻微着色。改色前先算 WCAG 对比度（文字 ≥ 4.5），见 docs/design-system.md。 */
+   柔灰画布 → 侧栏略深 → 白色卡片浮起；层次靠 1px 描边 + 轻阴影。
+   中性色朝主色色相轻微着色。改色前先算 WCAG 对比度（文字 ≥ 4.5，图形 ≥ 3），见 docs/design-system.md。 */
 :root {
   color-scheme: light;
   --radius: 0.75rem;
@@ -30,11 +30,16 @@
   /* 珊瑚浅底：失效等需要注意但不危险的提醒 */
   --coral: oklch(0.95 0.03 35);
   --coral-foreground: oklch(0.5 0.17 28);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.9 0.008 190);
-  --input: oklch(0.9 0.008 190);
+  /* 琥珀浅底：重定向、疑似重复等「需要看一眼」的提醒；indicator 给状态点等小图形用（对卡片 3.7） */
+  --warn: oklch(0.95 0.04 75);
+  --warn-foreground: oklch(0.48 0.13 70);
+  --warn-indicator: oklch(0.62 0.14 65);
+  /* 危险：对画布 4.9，色温贴近珊瑚 */
+  --destructive: oklch(0.55 0.21 26);
+  --border: oklch(0.86 0.012 190);
+  --input: oklch(0.86 0.012 190);
   --ring: oklch(0.52 0.1 180);
-  --card-shadow: 0 1px 2px oklch(0.2 0.02 200 / 0.05), 0 1px 3px oklch(0.2 0.02 200 / 0.04);
+  --card-shadow: 0 1px 2px oklch(0.2 0.02 200 / 0.08), 0 2px 6px oklch(0.2 0.02 200 / 0.06);
   /* logo 原色，只给插图用，不用于文字 */
   --brand-mint: #6ed3b7;
   --brand-mint-deep: #3fb597;
@@ -43,7 +48,8 @@
   --brand-ink: #3a2e28;
 }
 
-/* 深色：柔和炭灰（不用纯黑），卡片比画布亮一档 */
+/* 深色：柔和炭灰（不用纯黑），卡片比画布亮一档。
+   下面 @media 里的首帧兜底必须与这里保持一致。 */
 :root[data-theme="dark"] {
   color-scheme: dark;
   --background: oklch(0.215 0.008 200);
@@ -63,14 +69,18 @@
   --accent-foreground: oklch(0.88 0.08 176);
   --coral: oklch(0.33 0.07 30);
   --coral-foreground: oklch(0.88 0.07 35);
+  --warn: oklch(0.33 0.06 70);
+  --warn-foreground: oklch(0.88 0.08 80);
+  --warn-indicator: oklch(0.78 0.13 75);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 9%);
-  --input: oklch(1 0 0 / 14%);
+  --border: oklch(1 0 0 / 14%);
+  --input: oklch(1 0 0 / 18%);
   --ring: oklch(0.8 0.11 176);
   --card-shadow: 0 1px 3px oklch(0 0 0 / 0.45);
 }
 
-/* 脚本设置 data-theme 之前（首帧）也按系统显示，避免深色下闪白 */
+/* 首帧兜底：main.tsx 是模块脚本，执行前浏览器可能先绘制一帧，
+   这时还没有 data-theme，按系统深色显示，避免深色用户看到闪白。 */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
     color-scheme: dark;
@@ -78,12 +88,34 @@
     --sidebar: oklch(0.19 0.008 200);
     --foreground: oklch(0.96 0.005 200);
     --card: oklch(0.265 0.01 200);
-    --border: oklch(1 0 0 / 9%);
+    --card-foreground: oklch(0.96 0.005 200);
+    --popover: oklch(0.265 0.01 200);
+    --popover-foreground: oklch(0.96 0.005 200);
+    --primary: oklch(0.8 0.11 176);
+    --primary-foreground: oklch(0.2 0.03 200);
+    --secondary: oklch(0.3 0.01 200);
+    --secondary-foreground: oklch(0.96 0.005 200);
+    --muted: oklch(0.3 0.01 200);
+    --muted-foreground: oklch(0.72 0.01 200);
+    --accent: color-mix(in srgb, var(--primary) 22%, var(--card));
+    --accent-foreground: oklch(0.88 0.08 176);
+    --coral: oklch(0.33 0.07 30);
+    --coral-foreground: oklch(0.88 0.07 35);
+    --warn: oklch(0.33 0.06 70);
+    --warn-foreground: oklch(0.88 0.08 80);
+    --warn-indicator: oklch(0.78 0.13 75);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 14%);
+    --input: oklch(1 0 0 / 18%);
+    --ring: oklch(0.8 0.11 176);
+    --card-shadow: 0 1px 3px oklch(0 0 0 / 0.45);
   }
 }
 
 @theme inline {
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  /* 网址、token 数等需要区分 l/1/I、0/O 的内容 */
+  --font-mono: ui-monospace, SFMono-Regular, "Cascadia Mono", Consolas, monospace;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -106,6 +138,9 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-coral: var(--coral);
   --color-coral-foreground: var(--coral-foreground);
+  --color-warn: var(--warn);
+  --color-warn-foreground: var(--warn-foreground);
+  --color-warn-indicator: var(--warn-indicator);
   --color-destructive: var(--destructive);
   --color-border: var(--border);
   --color-input: var(--input);
