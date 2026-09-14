@@ -1,15 +1,5 @@
 import { useMemo, type ComponentType, type ReactNode } from 'react';
-import {
-  Activity,
-  Bookmark as BookmarkIcon,
-  ChevronRight,
-  CircleHelp,
-  Copy,
-  CornerUpRight,
-  Link2Off,
-  ShieldCheck,
-  Sparkles,
-} from 'lucide-react';
+import { Activity, ChevronRight, CircleDashed, CircleHelp, Copy, CornerUpRight, Link2Off, ShieldCheck, Sparkles } from 'lucide-react';
 import { topDomains, type BookmarkIndex, type TreeNode } from '@/lib/bookmarks';
 import { folderTiles } from '@/lib/treemap';
 import { findDuplicateGroups, redundantCount } from '@/lib/duplicates';
@@ -31,6 +21,11 @@ const SHELF_BOOK_LIMIT = 12;
 // 健康度分档：≥ 80 良好，≥ 50 一般，其余较差
 const HEALTH_GOOD = 80;
 const HEALTH_FAIR = 50;
+// 分档轨道：三段颜色与分档一致
+const HEALTH_TRACK = `linear-gradient(to right,
+  color-mix(in srgb, var(--coral) 78%, var(--card)) 0 ${HEALTH_FAIR}%,
+  color-mix(in srgb, var(--warn) 90%, var(--card)) ${HEALTH_FAIR}% ${HEALTH_GOOD}%,
+  color-mix(in srgb, var(--primary) 34%, var(--card)) ${HEALTH_GOOD}% 100%)`;
 
 const formatCount = (n: number) => n.toLocaleString('zh-CN');
 
@@ -45,21 +40,12 @@ interface Props {
   onOpenFolder: (folderId: string) => void;
 }
 
-function StatCard({
-  label,
-  icon: Icon,
-  value,
-  detail,
-  onClick,
-}: {
-  label: string;
-  icon: Icon;
-  value: number;
-  detail?: ReactNode;
-  onClick?: () => void;
-}) {
-  const content = (
-    <>
+const CARD = 'rounded-xl border bg-card p-4 text-left shadow-card';
+const CARD_BUTTON = 'outline-none transition-colors hover:border-primary/40 focus-visible:ring-2 focus-visible:ring-ring motion-safe:active:translate-y-px';
+
+function StatCard({ label, icon: Icon, value, detail, onClick }: { label: string; icon: Icon; value: number; detail: ReactNode; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className={cn(CARD, CARD_BUTTON, 'flex items-center gap-3')}>
       <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
         <Icon className="size-4" />
       </span>
@@ -70,18 +56,59 @@ function StatCard({
         </span>
       </span>
       {detail}
+    </button>
+  );
+}
+
+/** 健康度卡：分数 + 分档轨道 + 一句扣分原因。 */
+function HealthCard({ score, level, note, onClick }: { score: number; level: { label: string; tone: PillTone }; note: ReactNode; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className={cn(CARD, CARD_BUTTON, 'flex flex-col gap-2.5')}>
+      <span className="flex w-full items-center gap-3">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+          <ShieldCheck className="size-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-xs text-muted-foreground">健康度</span>
+          <span className="block text-2xl leading-tight font-semibold tabular-nums">
+            <CountUp value={score} />
+          </span>
+        </span>
+        <Pill tone={level.tone}>{level.label}</Pill>
+      </span>
+      <span aria-hidden className="relative block h-2 w-full rounded-full" style={{ background: HEALTH_TRACK }}>
+        <span
+          className="absolute top-1/2 h-4 w-[3px] -translate-x-1/2 -translate-y-1/2 rounded-xs bg-foreground shadow-[0_0_0_2px_var(--card)]"
+          style={{ left: `${score}%` }}
+        />
+      </span>
+      <span aria-hidden className="flex w-full justify-between text-xs text-muted-foreground">
+        <span>较差</span>
+        <span>一般</span>
+        <span>良好</span>
+      </span>
+      <span className="block text-xs text-pretty text-muted-foreground">{note}</span>
+    </button>
+  );
+}
+
+const Strong = ({ children }: { children: ReactNode }) => <b className="font-semibold text-foreground tabular-nums">{children}</b>;
+
+/** 扣分原因：取数量最多的一类问题，再补一句还没检查的数量。 */
+function healthNote(causes: { label: string; count: number }[], unscanned: number): ReactNode {
+  const main = [...causes].sort((a, b) => b.count - a.count).find((c) => c.count > 0);
+  const rest = unscanned > 0 && (
+    <>
+      ，另有 <Strong>{formatCount(unscanned)} 个书签</Strong>还没检查
     </>
   );
-  const base = 'flex items-center gap-3 rounded-xl border bg-card p-4 text-left shadow-card';
-  if (!onClick) return <div className={base}>{content}</div>;
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(base, 'outline-none transition-colors hover:border-primary/40 focus-visible:ring-2 focus-visible:ring-ring motion-safe:active:translate-y-px')}
-    >
-      {content}
-    </button>
+  return main ? (
+    <>
+      扣分主要来自 <Strong>{main.label}</Strong>
+      {rest}。
+    </>
+  ) : (
+    <>暂无明显问题{rest}。</>
   );
 }
 
@@ -101,6 +128,15 @@ export function Overview({ index, roots, barId, onNavigate, onOpenFolder }: Prop
   });
   const level: { label: string; tone: PillTone } =
     score >= HEALTH_GOOD ? { label: '良好', tone: 'ok' } : score >= HEALTH_FAIR ? { label: '一般', tone: 'warn' } : { label: '较差', tone: 'danger' };
+  const note = healthNote(
+    [
+      { label: `${formatCount(health.broken)} 个失效链接`, count: health.broken },
+      { label: `${formatCount(duplicates)} 条重复书签`, count: duplicates },
+      { label: `${formatCount(health.redirected)} 个网址已搬家`, count: health.redirected },
+      { label: `${formatCount(uncategorized)} 个书签没归类`, count: uncategorized },
+    ],
+    health.unscanned,
+  );
 
   const tasks: { phrase: string; hint: string; count: number; target: Target; icon: Icon }[] = [
     { phrase: `${formatCount(health.broken)} 个失效链接`, hint: '网页已经打不开，可以删除或忽略', count: health.broken, target: 'broken', icon: Link2Off },
@@ -132,14 +168,9 @@ export function Overview({ index, roots, barId, onNavigate, onOpenFolder }: Prop
         }
       />
 
-      <div className="grid shrink-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label="书签"
-          icon={BookmarkIcon}
-          value={index.bookmarks.length}
-          detail={<span className="text-xs text-muted-foreground tabular-nums">{formatCount(index.folderCount)} 个文件夹</span>}
-        />
-        <StatCard label="健康度" icon={ShieldCheck} value={score} detail={<Pill tone={level.tone}>{level.label}</Pill>} onClick={() => onNavigate('scan')} />
+      {/* 四张卡都是「需要你行动」的数字；书签总数已在副标题里 */}
+      <div className="grid shrink-0 gap-4 sm:grid-cols-2 xl:grid-cols-[1.5fr_1fr_1fr_1fr]">
+        <HealthCard score={score} level={level} note={note} onClick={() => onNavigate('scan')} />
         <StatCard
           label="失效链接"
           icon={Link2Off}
@@ -153,6 +184,13 @@ export function Overview({ index, roots, barId, onNavigate, onOpenFolder }: Prop
           value={duplicates}
           detail={duplicates > 0 ? <Pill tone="warn">去清理</Pill> : <Pill>无</Pill>}
           onClick={() => onNavigate('duplicates')}
+        />
+        <StatCard
+          label="还没检查"
+          icon={CircleDashed}
+          value={health.unscanned}
+          detail={health.unscanned > 0 ? <Pill>去扫描</Pill> : <Pill>无</Pill>}
+          onClick={() => onNavigate('scan')}
         />
       </div>
 
