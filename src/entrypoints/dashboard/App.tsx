@@ -82,20 +82,20 @@ export function App() {
   if (!tree || !index) return <p className="p-10 text-sm text-muted-foreground">正在读取书签…</p>;
 
   return (
-    <div className="grid h-screen grid-cols-[200px_1fr] grid-rows-[56px_1fr]">
-      <header className="col-span-2 flex items-center gap-8 border-b px-5">
-        <span className="flex items-center gap-2 font-semibold text-primary">
+    <div className="grid h-screen grid-cols-[224px_1fr] grid-rows-[60px_1fr]">
+      <header className="col-span-2 flex items-center gap-6 border-b bg-card px-5">
+        <span className="flex w-[184px] shrink-0 items-center gap-2.5 text-[15px] font-semibold tracking-tight">
           <img src="/icon-48.png" alt="" className="size-7 rounded-md" />
           Bookmark Hub
         </span>
         <div className="relative w-full max-w-md">
-          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             id="search"
             type="search"
             aria-label="搜索书签"
             placeholder="搜索标题、网址、目录…"
-            className="pl-8"
+            className="h-9 rounded-md pl-9"
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
@@ -105,21 +105,30 @@ export function App() {
         </div>
       </header>
 
-      <nav aria-label="主导航" className="flex flex-col gap-4 overflow-auto border-r bg-muted/40 p-3">
+      <nav aria-label="主导航" className="flex flex-col gap-5 overflow-auto border-r bg-card px-3 py-4">
         {NAV_GROUPS.map((group) => (
-          <div key={group.label} className="flex flex-col gap-1">
-            <p className="px-3 text-xs tracking-wider text-muted-foreground">{group.label}</p>
-            {group.items.map(({ view: target, label, icon: Icon }) => (
-              <Button
-                key={target}
-                variant={view === target ? 'secondary' : 'ghost'}
-                className="justify-start"
-                onClick={() => setView(target)}
-              >
-                <Icon />
-                {label}
-              </Button>
-            ))}
+          <div key={group.label} className="flex flex-col gap-0.5">
+            <p className="px-3 pb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              {group.label}
+            </p>
+            {group.items.map(({ view: target, label, icon: Icon }) => {
+              const active = view === target;
+              return (
+                <Button
+                  key={target}
+                  variant="ghost"
+                  className={
+                    active
+                      ? 'h-9 justify-start gap-2.5 bg-secondary font-medium [&_svg]:text-primary'
+                      : 'h-9 justify-start gap-2.5 font-normal text-muted-foreground hover:text-foreground'
+                  }
+                  onClick={() => setView(target)}
+                >
+                  <Icon />
+                  {label}
+                </Button>
+              );
+            })}
           </div>
         ))}
       </nav>

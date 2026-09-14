@@ -50,8 +50,12 @@ export function Overview({ index, roots, barId, onNavigate, onOpenFolder }: Prop
   const stats = [
     { label: '总书签', value: index.bookmarks.length },
     { label: '文件夹', value: index.folderCount },
-    { label: '失效', value: health.broken, tone: 'text-destructive' },
-    { label: '重复', value: duplicates, tone: 'text-amber-600 dark:text-amber-400' },
+    { label: '失效', value: health.broken, tone: health.broken > 0 ? 'text-destructive' : undefined },
+    {
+      label: '重复',
+      value: duplicates,
+      tone: duplicates > 0 ? 'text-amber-600 dark:text-amber-400' : undefined,
+    },
   ];
 
   const tasks: { label: string; count: number; action: string; target: Target }[] = [
@@ -71,14 +75,19 @@ export function Overview({ index, roots, barId, onNavigate, onOpenFolder }: Prop
 
   return (
     <section className="mx-auto max-w-5xl space-y-6 p-8">
-      <h1 className="text-2xl font-semibold">我的书签</h1>
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">我的书签</h1>
+        <p className="mt-1 text-sm text-muted-foreground">检测失效、清理重复、用智能体重排分类，所有改动都可撤销。</p>
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (
-          <Card key={s.label}>
-            <CardHeader>
-              <CardDescription>{s.label}</CardDescription>
-              <CardTitle className={`text-3xl tabular-nums ${s.tone ?? ''}`}>{formatCount(s.value)}</CardTitle>
+          <Card key={s.label} className="gap-0">
+            <CardHeader className="gap-1">
+              <CardDescription className="text-xs font-medium uppercase tracking-wide">{s.label}</CardDescription>
+              <CardTitle className={`text-3xl font-semibold tabular-nums ${s.tone ?? ''}`}>
+                {formatCount(s.value)}
+              </CardTitle>
             </CardHeader>
           </Card>
         ))}
@@ -142,7 +151,7 @@ export function Overview({ index, roots, barId, onNavigate, onOpenFolder }: Prop
           {rects.length === 0 ? (
             <p className="text-sm text-muted-foreground">还没有书签。</p>
           ) : (
-            <div className="relative aspect-[2/1] w-full overflow-hidden rounded-md">
+            <div className="relative aspect-[2/1] w-full overflow-hidden rounded-md border">
               {rects.map((r) => {
                 const rank = tiles.findIndex((t) => t.id === r.id);
                 const tile = tiles[rank]!;
@@ -180,7 +189,7 @@ export function Overview({ index, roots, barId, onNavigate, onOpenFolder }: Prop
 
       <Card className="max-w-xl">
         <CardHeader>
-          <CardTitle>收藏最多的网站</CardTitle>
+          <CardTitle>收藏最多��网站</CardTitle>
         </CardHeader>
         <CardContent>
           {domains.length > 0 ? (

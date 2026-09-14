@@ -47,9 +47,9 @@ function Tile({ item }: { item: TileItem }) {
       target="_blank"
       rel="noreferrer"
       title={`${name}\n${item.url}`}
-      className="flex min-w-0 flex-col items-center gap-2 rounded-2xl p-3 outline-none hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring"
+      className="flex min-w-0 flex-col items-center gap-2 rounded-lg p-3 outline-none hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <span className="flex size-16 items-center justify-center overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-border">
+      <span className="flex size-16 items-center justify-center overflow-hidden rounded-lg bg-card shadow-sm ring-1 ring-border">
         {broken ? (
           <span className="text-2xl font-semibold text-primary">{name.slice(0, 1).toUpperCase()}</span>
         ) : (
@@ -105,7 +105,7 @@ export function LauncherView({ roots, index }: Props) {
   return (
     <div className="px-8 pt-10 pb-16">
       <div className="relative mx-auto max-w-3xl">
-        <Search className="pointer-events-none absolute top-1/2 left-5 size-6 -translate-y-1/2 text-muted-foreground" />
+        <Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted-foreground" />
         <input
           id="launcher-search"
           type="search"
@@ -115,7 +115,7 @@ export function LauncherView({ roots, index }: Props) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="h-14 w-full rounded-full border bg-card pr-6 pl-14 text-lg shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="h-13 w-full rounded-xl border bg-card pr-6 pl-12 text-base shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       </div>
 
@@ -139,7 +139,7 @@ export function LauncherView({ roots, index }: Props) {
                 type="button"
                 onClick={() => select(c.id)}
                 className={cn(
-                  'flex items-center justify-between gap-2 rounded-xl px-4 py-2.5 text-left text-base outline-none hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring',
+                  'flex items-center justify-between gap-2 rounded-md px-4 py-2.5 text-left text-sm outline-none hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring',
                   c.id === selected?.id && 'bg-accent font-medium text-accent-foreground',
                 )}
               >
@@ -163,7 +163,7 @@ export function LauncherView({ roots, index }: Props) {
                       aria-selected={isActive}
                       onClick={() => setTab(value)}
                       className={cn(
-                        'rounded-xl px-4 py-2.5 text-base outline-none hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring',
+                        'rounded-md px-3.5 py-2 text-sm outline-none hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring',
                         isActive && 'bg-accent font-medium text-accent-foreground',
                       )}
                     >
