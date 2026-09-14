@@ -2,6 +2,8 @@ export const CATEGORY_SEPARATOR = ' / ';
 export const MAX_CATEGORY_DEPTH = 3;
 export const MAX_CATEGORY_NAME = 30;
 export const MAX_CATEGORIES = 30;
+/** 一级分类会直接建在书签栏这类目录下，太多会挤满书签栏 */
+export const MAX_TOP_LEVEL = 6;
 
 export interface PlanScope {
   /** 要整理的目录（含子目录） */
@@ -40,6 +42,10 @@ export function proposeTaxonomy(plan: OrganizePlan, categories: string[]): Organ
   const normalized = [...new Set(categories.map(normalizeCategory))];
   if (normalized.length === 0) throw new Error('分类体系至少需要一个分类');
   if (normalized.length > MAX_CATEGORIES) throw new Error(`分类太多：最多 ${MAX_CATEGORIES} 个分类`);
+  const topLevel = [...new Set(normalized.map((c) => c.split(CATEGORY_SEPARATOR)[0]))];
+  if (topLevel.length > MAX_TOP_LEVEL) {
+    throw new Error(`一级分类最多 ${MAX_TOP_LEVEL} 个，现在有 ${topLevel.length} 个（${topLevel.join('、')}）。请把相近的合并到一个大类下，例如「编程 / 前端」「编程 / 后端」`);
+  }
   const kept = Object.fromEntries(Object.entries(plan.assignments).filter(([, category]) => normalized.includes(category)));
   return { ...plan, categories: normalized, assignments: kept };
 }

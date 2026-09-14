@@ -50,6 +50,13 @@ describe('proposeTaxonomy', () => {
     expect(() => proposeTaxonomy(scoped, [])).toThrow('至少需要一个分类');
   });
 
+  it('rejects more than 6 top-level categories so the bookmark bar stays short', () => {
+    expect(() => proposeTaxonomy(scoped, ['前端', '后端', '工程化', 'AI', '设计', '工具', '娱乐'])).toThrow('一级分类最多 6 个');
+    const grouped = ['编程 / 前端 / Vue', '编程 / 后端', '编程 / 工程化', 'AI', '设计', '工具', '娱乐', '资料', '生活'];
+    expect(() => proposeTaxonomy(scoped, grouped)).toThrow('一级分类最多 6 个');
+    expect(proposeTaxonomy(scoped, grouped.slice(0, 7)).categories).toHaveLength(7);
+  });
+
   it('moves bookmarks of removed categories back to unassigned', () => {
     const plan = assignBookmarks(proposeTaxonomy(scoped, ['文档 / 中台', '教程']), ['a'], '文档 / 中台', inScope);
     expect(proposeTaxonomy(plan, ['教程']).assignments).toEqual({});

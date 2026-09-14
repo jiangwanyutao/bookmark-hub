@@ -145,7 +145,7 @@ export function createOrganizeTools(ctx: ToolContext): AgentTool<any>[] {
   const proposeTaxonomyTool = defineTool({
     name: 'propose_taxonomy',
     label: '提出分类体系',
-    description: '提交或替换整套分类体系，路径用「 / 」分隔，最多 3 层、30 个分类。替换后，分到已删除分类的书签回到未归类。',
+    description: '提交或替换整套分类体系，路径用「 / 」分隔，分类名里不能含斜杠；一级分类最多 6 个，最多 3 层、30 个分类。替换后，分到已删除分类的书签回到未归类。',
     parameters: Type.Object({ categories: Type.Array(Type.String()) }),
     execute: async (_id, { categories }) => {
       const next = proposeTaxonomy(ctx.getPlan(), categories);
