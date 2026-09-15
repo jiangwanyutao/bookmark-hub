@@ -1,5 +1,8 @@
+import type { ReactNode } from 'react';
 import { MousePointerClick } from 'lucide-react';
 import type { Bookmark, FolderOption } from '@/lib/bookmarks';
+import type { ScanResult } from '@/lib/scan/classify';
+import { HEALTH_META, HealthDot } from './HealthDot';
 import { Separator } from '@/components/ui/separator';
 import { BookmarkActions } from './BookmarkActions';
 import { Favicon } from './Favicon';
@@ -7,12 +10,14 @@ import { TagEditor } from './TagEditor';
 
 interface Props {
   bookmark: Bookmark | undefined;
+  /** url → 扫描结果 */
+  results: Map<string, ScanResult>;
   folders: FolderOption[];
   tags: string[];
   onSaveTags: (tags: string[]) => Promise<void>;
 }
 
-export function BookmarkDetail({ bookmark, folders, tags, onSaveTags }: Props) {
+export function BookmarkDetail({ bookmark, results, folders, tags, onSaveTags }: Props) {
   if (!bookmark) {
     return (
       <aside className="flex flex-col items-center justify-center gap-3 rounded-xl border bg-card p-6 text-center shadow-card">
@@ -25,7 +30,17 @@ export function BookmarkDetail({ bookmark, folders, tags, onSaveTags }: Props) {
     );
   }
 
-  const fields = [
+  const health = results.get(bookmark.url)?.health ?? 'unscanned';
+  const fields: { label: string; value: ReactNode }[] = [
+    {
+      label: '健康状态',
+      value: (
+        <span className="flex items-center gap-1.5">
+          <HealthDot health={health} />
+          {HEALTH_META[health].label}
+        </span>
+      ),
+    },
     { label: '网址', value: bookmark.url },
     { label: '目录', value: bookmark.folderPath },
     {

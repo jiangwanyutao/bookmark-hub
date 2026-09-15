@@ -2,16 +2,24 @@ import { useRef, type KeyboardEvent } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { SearchX } from 'lucide-react';
 import type { Bookmark } from '@/lib/bookmarks';
+import type { ScanResult } from '@/lib/scan/classify';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Favicon } from './Favicon';
+import { HEALTH_META, HealthDot } from './HealthDot';
 
-const ROW_HEIGHT = 56;
+const ROW_HEIGHT = 44;
 const OVERSCAN = 10;
 const PAGE_STEP = 10;
+// 标签列会挤掉标题，标题才是主信息
+const MAX_ROW_TAGS = 2;
 
 interface Props {
   bookmarks: Bookmark[];
+  /** url → 标签 */
+  tags: Map<string, string[]>;
+  /** url → 扫描结果 */
+  results: Map<string, ScanResult>;
   selectedId: string | null;
   onSelect: (id: string) => void;
   /** 有搜索词或选了目录时，空状态给一个清空按钮 */
@@ -20,7 +28,7 @@ interface Props {
 
 const optionId = (id: string) => `bookmark-option-${id}`;
 
-export function BookmarkList({ bookmarks, selectedId, onSelect, onClearFilters }: Props) {
+export function BookmarkList({ bookmarks, tags, results, selectedId, onSelect, onClearFilters }: Props) {
   const parentRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
     count: bookmarks.length,
@@ -82,6 +90,8 @@ export function BookmarkList({ bookmarks, selectedId, onSelect, onClearFilters }
           const b = bookmarks[item.index];
           if (!b) return null;
           const selected = b.id === selectedId;
+          const rowTags = tags.get(b.url) ?? [];
+          const health = results.get(b.url)?.health ?? 'unscanned';
           return (
             <div
               key={b.id}
@@ -89,7 +99,7 @@ export function BookmarkList({ bookmarks, selectedId, onSelect, onClearFilters }
               role="option"
               aria-selected={selected}
               className={cn(
-                'group absolute inset-x-0 top-0 flex cursor-pointer items-center gap-3 border-b px-5 text-left',
+                'group absolute inset-x-0 top-0 flex cursor-pointer items-center gap-2.5 border-b px-5 text-left',
                 'hover:bg-accent/50',
                 selected && 'bg-accent text-accent-foreground shadow-[inset_2px_0_0_var(--primary)] hover:bg-accent',
               )}
@@ -97,12 +107,26 @@ export function BookmarkList({ bookmarks, selectedId, onSelect, onClearFilters }
               onClick={() => onSelect(b.id)}
             >
               <Favicon url={b.url} name={b.title || b.domain || b.url} className="size-5 rounded" />
-              <span className="flex min-w-0 flex-col">
+              <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-sm font-medium">{b.title || b.url}</span>
                 <span className={cn('truncate text-xs', selected ? 'text-accent-foreground' : 'text-muted-foreground group-hover:text-accent-foreground')}>
                   {b.domain || b.url.split(':')[0]} · {b.folderPath}
                 </span>
               </span>
+              {rowTags.length > 0 && (
+                <span className="flex shrink-0 items-center gap-1">
+                  {rowTags.slice(0, MAX_ROW_TAGS).map((t) => (
+                    <span key={t} className="rounded-full bg-muted px-1.5 text-xs text-muted-foreground">
+                      {t}
+                    </span>
+                  ))}
+                  {rowTags.length > MAX_ROW_TAGS && (
+                    <span className="text-xs text-muted-foreground tabular-nums">+{rowTags.length - MAX_ROW_TAGS}</span>
+                  )}
+                </span>
+              )}
+              <HealthDot health={health} />
+              <span className="sr-only">{HEALTH_META[health].label}</span>
             </div>
           );
         })}

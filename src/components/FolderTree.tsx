@@ -11,7 +11,6 @@ interface Shared {
 }
 
 const isFolder = (node: TreeNode) => node.url === undefined;
-const INDENT_PX = 14;
 
 function FolderButton({
   active,
@@ -69,7 +68,7 @@ function FolderNode({ node, depth, ...shared }: Shared & { node: TreeNode; depth
 
   return (
     <li>
-      <div className="flex items-center" style={{ paddingLeft: depth * INDENT_PX }}>
+      <div className="flex items-center">
         {subfolders.length > 0 ? (
           <Button
             variant="ghost"
@@ -92,8 +91,9 @@ function FolderNode({ node, depth, ...shared }: Shared & { node: TreeNode; depth
           onClick={() => shared.onSelect(node.id)}
         />
       </div>
+      {/* 子层级靠左边距缩进，竖线落在上一级折叠箭头的中线上 */}
       {open && subfolders.length > 0 && (
-        <ul>
+        <ul className="ml-3 border-l border-border pl-1">
           {subfolders.map((child) => (
             <FolderNode key={child.id} node={child} depth={depth + 1} {...shared} />
           ))}
