@@ -168,7 +168,8 @@ export function ChatPanel({ state, roots, countByFolder, onStart, onSend, onStop
         <span className="font-mono tabular-nums">已用 {state.tokens.toLocaleString('zh-CN')} tokens</span>
       </div>
       <Conversation className="min-h-0" aria-live="polite">
-        <ConversationContent className="gap-4">
+        {/* 消息少时贴底，靠近输入框 */}
+        <ConversationContent className="min-h-full justify-end gap-4">
           {toBlocks(state.transcript).map((block) => (
             <Row key={block.id} block={block} />
           ))}

@@ -14,15 +14,26 @@ const formatCount = (n: number) => n.toLocaleString('zh-CN');
 type Icon = ComponentType<{ className?: string }>;
 type StatusKey = 'healthy' | 'redirected' | 'broken' | 'pending' | 'skipped' | 'unscanned';
 
-// 状态颜色只上在小圆点和分段条上，旁边总有文字和数字
-const STATUS: { key: StatusKey; label: string; hint: string; icon: Icon; dot: string }[] = [
-  { key: 'healthy', label: '正常', hint: '能正常打开', icon: CircleCheck, dot: 'bg-primary' },
-  { key: 'redirected', label: '网址已搬家', hint: '永久跳转到了新地址', icon: CornerUpRight, dot: 'bg-warn-indicator' },
-  { key: 'broken', label: '失效', hint: '网页已经打不开', icon: Link2Off, dot: 'bg-destructive' },
-  { key: 'pending', label: '待确认', hint: '可能需要登录、被限流或需要 VPN', icon: CircleHelp, dot: 'bg-muted-foreground/60' },
-  { key: 'skipped', label: '已跳过', hint: '内网地址和带登录凭据的链接', icon: CircleMinus, dot: 'bg-muted-foreground/30' },
-  { key: 'unscanned', label: '还没检查', hint: '扫描后才知道状态', icon: Clock, dot: 'bg-border' },
+// fill 是分段条的实心填充（要表达比例）；mark 是小圆点，三种灰态靠形状区分：空心圈 / 实心点 / 虚线圈
+const STATUS: { key: StatusKey; label: string; hint: string; icon: Icon; fill: string; mark: string; iconBg?: string }[] = [
+  { key: 'healthy', label: '正常', hint: '能正常打开', icon: CircleCheck, fill: 'bg-primary', mark: 'bg-primary' },
+  { key: 'redirected', label: '网址已搬家', hint: '永久跳转到了新地址', icon: CornerUpRight, fill: 'bg-warn-indicator', mark: 'bg-warn-indicator' },
+  { key: 'broken', label: '失效', hint: '网页已经打不开', icon: Link2Off, fill: 'bg-destructive', mark: 'bg-destructive' },
+  {
+    key: 'pending',
+    label: '待确认',
+    hint: '可能需要登录、被限流或需要 VPN',
+    icon: CircleHelp,
+    fill: 'bg-warn-indicator/60',
+    mark: 'border-[1.5px] border-warn-indicator',
+    iconBg: 'bg-warn text-warn-foreground',
+  },
+  { key: 'skipped', label: '已跳过', hint: '内网地址和带登录凭据的链接', icon: CircleMinus, fill: 'bg-muted-foreground/40', mark: 'bg-muted-foreground/50' },
+  { key: 'unscanned', label: '还没检查', hint: '扫描后才知道状态', icon: Clock, fill: 'bg-border', mark: 'border border-dashed border-muted-foreground' },
 ];
+
+// 占比小的段也要看得清颜色；比例因此失真，准确数字看图例
+const MIN_SEGMENT = 'min-w-[26px]';
 
 export function ScanView({ bookmarks }: { bookmarks: Bookmark[] }) {
   const { phase, progress, permitted, resumable, summary, start, pause, cancel } = useScan(bookmarks);
@@ -85,9 +96,10 @@ export function ScanView({ bookmarks }: { bookmarks: Bookmark[] }) {
         </p>
       )}
 
+      {/* 面板保持自然高度：撑满余高时中间是一大块空白，比页面底部留白更显空 */}
       <Panel
-        title={headline}
-        meta={`共 ${formatCount(total)} 个`}
+        title="书签健康"
+        meta={headline}
         actions={
           progress && (running || phase === 'offline') ? (
             <Pill tone={progress.networkMode === 'restricted' ? 'warn' : 'ok'}>
@@ -96,52 +108,77 @@ export function ScanView({ bookmarks }: { bookmarks: Bookmark[] }) {
           ) : undefined
         }
         className="shrink-0"
-        bodyClassName="space-y-3 p-4"
+        bodyClassName="flex flex-wrap items-center gap-x-8 gap-y-4 p-5"
       >
-        {progress && (running || phase === 'offline') && (
-          <div className="space-y-1.5">
-            <div
-              role="progressbar"
-              aria-label="扫描进度"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={Math.round(percent)}
-              className="h-2 overflow-hidden rounded-full bg-muted"
-            >
-              <div className="h-full rounded-full bg-primary" style={{ width: `${percent}%` }} />
+        <div className="flex shrink-0 flex-col">
+          <span className="text-4xl leading-none font-semibold tabular-nums">{formatCount(summary.unscanned)}</span>
+          <span className="mt-2 text-sm text-muted-foreground">还没检查</span>
+          <span className="mt-0.5 text-xs text-muted-foreground tabular-nums">
+            共 {formatCount(total)} 个 · 已检查 {formatCount(total - summary.unscanned)} 个
+          </span>
+        </div>
+
+        <div className="flex min-w-64 flex-1 flex-col gap-3">
+          {progress && (running || phase === 'offline') && (
+            <div className="space-y-1.5">
+              <div
+                role="progressbar"
+                aria-label="扫描进度"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(percent)}
+                className="h-2 overflow-hidden rounded-full bg-muted"
+              >
+                <div className="h-full rounded-full bg-primary" style={{ width: `${percent}%` }} />
+              </div>
+              <p className="text-xs text-muted-foreground tabular-nums">
+                本次 {formatCount(progress.counts.healthy)} 正常 · {formatCount(progress.counts.redirected)} 搬家 · {formatCount(progress.counts.broken)} 失效 ·{' '}
+                {formatCount(progress.counts.suspicious + progress.counts.unknown)} 待确认
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground tabular-nums">
-              本次 {formatCount(progress.counts.healthy)} 正常 · {formatCount(progress.counts.redirected)} 搬家 · {formatCount(progress.counts.broken)} 失效 ·{' '}
-              {formatCount(progress.counts.suspicious + progress.counts.unknown)} 待确认
-            </p>
+          )}
+          <div aria-hidden className="flex h-2.5 gap-0.5 overflow-hidden rounded-full">
+            {STATUS.filter((s) => summary[s.key] > 0).map((s) => (
+              <div key={s.key} title={`${s.label} ${formatCount(summary[s.key])}`} className={cn(MIN_SEGMENT, s.fill)} style={{ flex: `${summary[s.key]} 1 0` }} />
+            ))}
           </div>
-        )}
-        {/* 分段条只做概览，具体数字见下方状态卡 */}
-        <div aria-hidden className="flex h-2.5 gap-0.5 overflow-hidden rounded-full">
-          {STATUS.filter((s) => summary[s.key] > 0).map((s) => (
-            <div key={s.key} className={cn('min-w-1', s.dot)} style={{ flex: `${summary[s.key]} 1 0` }} />
-          ))}
+          <ul aria-label="各状态数量" className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
+            {STATUS.map((s) => (
+              <li key={s.key} className="flex items-center gap-1.5">
+                <span aria-hidden className={cn('size-2.5 rounded-full', s.mark)} />
+                <span className="text-muted-foreground">{s.label}</span>
+                <span className={cn('tabular-nums', summary[s.key] === 0 ? 'text-muted-foreground' : 'font-semibold')}>{formatCount(summary[s.key])}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       </Panel>
 
+      {/* 0 值的卡退到背景：数字变细变灰，不降整卡透明度（文字对比度要够） */}
       <ul className="grid shrink-0 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {STATUS.map((s) => (
-          <li key={s.key} className="flex items-center gap-3 rounded-xl border bg-card p-4 shadow-card">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-              <s.icon className="size-4" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="flex items-center gap-1.5 text-sm font-medium">
-                <span aria-hidden className={cn('size-2 rounded-full', s.dot)} />
-                {s.label}
+        {STATUS.map((s) => {
+          const empty = summary[s.key] === 0;
+          return (
+            <li
+              key={s.key}
+              className={cn('flex items-center gap-3 rounded-xl border bg-card p-4 shadow-card', s.key === 'unscanned' && !empty && 'border-dashed')}
+            >
+              <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-lg', s.iconBg ?? 'bg-muted text-muted-foreground')}>
+                <s.icon className="size-4" />
               </span>
-              <span className="block truncate text-xs text-muted-foreground">{s.hint}</span>
-            </span>
-            <span className="text-2xl font-semibold tabular-nums">
-              <CountUp value={summary[s.key]} />
-            </span>
-          </li>
-        ))}
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-1.5 text-sm font-medium">
+                  <span aria-hidden className={cn('size-2.5 rounded-full', s.mark)} />
+                  {s.label}
+                </span>
+                <span className="block truncate text-xs text-muted-foreground">{s.hint}</span>
+              </span>
+              <span className={cn('text-2xl tabular-nums', empty ? 'font-normal text-muted-foreground' : 'font-semibold')}>
+                <CountUp value={summary[s.key]} />
+              </span>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

@@ -46,6 +46,8 @@ export function ScopePicker({ roots, countByFolder, onStart }: Props) {
   const [checked, setChecked] = useState<string[]>([]);
   const [pickedRoot, setPickedRoot] = useState<string>();
   const rootFolderId = pickedRoot ?? folders[0]?.id;
+  // countByFolder 含子目录，勾了父目录时子目录不会重复记录，直接累加即可
+  const coveredCount = useMemo(() => checked.reduce((sum, id) => sum + (countByFolder.get(id) ?? 0), 0), [checked, countByFolder]);
 
   // 范围含子目录：勾了父目录就不再单独记子目录
   function toggle(row: FolderRow, on: boolean) {
@@ -70,7 +72,7 @@ export function ScopePicker({ roots, countByFolder, onStart }: Props) {
           return (
             <label
               key={row.id}
-              className="flex cursor-pointer items-center gap-2 rounded-md py-1 pr-2 text-sm hover:bg-muted/60 has-disabled:cursor-default"
+              className="flex cursor-pointer items-center gap-2 rounded-md py-1.5 pr-2 text-sm hover:bg-muted/60 has-disabled:cursor-default"
               style={{ paddingLeft: 8 + row.depth * INDENT_PX }}
             >
               <Checkbox checked={covered || checked.includes(row.id)} disabled={covered} onCheckedChange={(value) => toggle(row, value === true)} />
@@ -81,6 +83,10 @@ export function ScopePicker({ roots, countByFolder, onStart }: Props) {
         })}
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-3 border-t px-4 py-3">
+        {/* 内网地址不会发给 AI，所以是「约」 */}
+        <span className="text-xs text-muted-foreground tabular-nums">
+          已选 {checked.length} 个目录 · 覆盖约 {coveredCount.toLocaleString('zh-CN')} 个书签
+        </span>
         <span id="scope-root-label" className="text-sm">
           新分类体系建在
         </span>
