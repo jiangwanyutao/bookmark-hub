@@ -57,7 +57,7 @@ const port = server.address().port;
 const { page, close } = await launchExtension([`--host-resolver-rules=MAP ${AI_HOST} 127.0.0.1`]);
 
 try {
-  const otherId = await page.evaluate(async (baseUrl) => {
+  const { otherId, otherTitle } = await page.evaluate(async (baseUrl) => {
     await chrome.storage.local.set({ aiConfig: { baseUrl, apiKey: 'sk-test', model: 'mock', privacy: 'title_domain' } });
     for (const [title, url] of [['React 文档', 'https://react.dev/'], ['Vue 指南', 'https://vuejs.org/guide/'], ['Go 教程', 'https://go.dev/tour/']]) {
       await chrome.bookmarks.create({ parentId: '2', title, url });
@@ -65,12 +65,13 @@ try {
     // 书签全被移走后应自动删除、撤销后应恢复的旧目录
     const old = await chrome.bookmarks.create({ parentId: '2', title: '旧目录' });
     await chrome.bookmarks.create({ parentId: old.id, title: 'Rust 教程', url: 'https://doc.rust-lang.org/book/' });
-    return '2';
+    // 根目录名跟随浏览器语言（中文「其他书签」/ 英文「Other bookmarks」），按实际名字找
+    return { otherId: '2', otherTitle: (await chrome.bookmarks.get('2'))[0].title };
   }, `http://${AI_HOST}:${port}/v1`);
   await page.reload();
 
   await nav(page, '智能整理');
-  await page.getByRole('checkbox', { name: /^其他书签/ }).click();
+  await page.getByRole('checkbox', { name: new RegExp(`^${otherTitle}`) }).click();
   await page.getByRole('button', { name: '开始整理' }).click();
   await page.getByText('已完成，去右侧预览并确认').waitFor();
   await page.getByText(/思考过程/).first().waitFor();
