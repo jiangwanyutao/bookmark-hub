@@ -44,6 +44,8 @@ export async function launchExtension(extraArgs = []) {
     // 完整版 Chromium 的新无头模式才支持加载扩展
     channel: 'chromium',
     viewport: { width: 1440, height: 900 },
+    // 固定中文界面：书签根目录名（书签栏 / 其他书签）跟随浏览器语言，CI 默认是英文
+    locale: 'zh-CN',
     args: [`--disable-extensions-except=${extDir}`, `--load-extension=${extDir}`, '--no-proxy-server', ...extraArgs],
   });
 
