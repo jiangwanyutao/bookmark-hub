@@ -51,7 +51,7 @@ export function DistributionBars({ tiles, roots, countByFolder, onOpenFolder }: 
               onFocus={() => setActiveId(t.id)}
               onClick={() => t.folderId && onOpenFolder(t.folderId)}
               className={cn(
-                'flex min-h-14 flex-1 flex-col justify-center gap-1.5 border-l-2 border-l-transparent px-5 py-2 text-left outline-none transition-colors',
+                'flex min-h-fit flex-1 flex-col justify-center gap-1.5 border-l-2 border-l-transparent px-5 py-2 text-left outline-none transition-colors',
                 'hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
                 isActive && 'border-l-primary bg-accent text-accent-foreground hover:bg-accent',
                 !t.folderId && 'cursor-default',
