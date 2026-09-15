@@ -1,11 +1,7 @@
 // 端到端：本地假 OpenAI 兼容服务按轮次返回工具调用，走完整个智能整理流程并验证撤销。
 import http from 'node:http';
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-import { chromium } from 'playwright';
+import { check, launchExtension, nav } from './helpers.mjs';
 
-const SRC = path.resolve('.output/chrome-mv3');
 const AI_HOST = 'ai.test';
 
 // ---------- 假模型：按请求里已有的助手消息数决定下一步 ----------
@@ -55,41 +51,12 @@ const server = http.createServer((req, res) => {
   });
 });
 
-const fail = (message) => {
-  console.error(`FAIL: ${message}`);
-  process.exitCode = 1;
-};
-
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const port = server.address().port;
 
-// 测试副本：直接授予网站权限，免去自动化里无法点击的授权框
-const extDir = fs.mkdtempSync(path.join(os.tmpdir(), 'bh-e2e-ext-'));
-fs.cpSync(SRC, extDir, { recursive: true });
-const manifestPath = path.join(extDir, 'manifest.json');
-const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-manifest.host_permissions = ['<all_urls>'];
-fs.writeFileSync(manifestPath, JSON.stringify(manifest));
-
-const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'bh-e2e-'));
-const ctx = await chromium.launchPersistentContext(userDataDir, {
-  headless: false,
-  args: [
-    `--disable-extensions-except=${extDir}`,
-    `--load-extension=${extDir}`,
-    `--host-resolver-rules=MAP ${AI_HOST} 127.0.0.1`,
-    '--no-proxy-server',
-  ],
-});
+const { page, close } = await launchExtension([`--host-resolver-rules=MAP ${AI_HOST} 127.0.0.1`]);
 
 try {
-  let [sw] = ctx.serviceWorkers();
-  if (!sw) sw = await ctx.waitForEvent('serviceworker');
-  const page = await ctx.newPage();
-  page.setDefaultTimeout(30_000);
-  page.on('pageerror', (e) => console.log('[pageerror]', e.message));
-  await page.goto(`chrome-extension://${new URL(sw.url()).host}/dashboard.html`);
-
   const otherId = await page.evaluate(async (baseUrl) => {
     await chrome.storage.local.set({ aiConfig: { baseUrl, apiKey: 'sk-test', model: 'mock', privacy: 'title_domain' } });
     for (const [title, url] of [['React 文档', 'https://react.dev/'], ['Vue 指南', 'https://vuejs.org/guide/'], ['Go 教程', 'https://go.dev/tour/']]) {
@@ -102,12 +69,12 @@ try {
   }, `http://${AI_HOST}:${port}/v1`);
   await page.reload();
 
-  await page.getByRole('navigation', { name: '主导航' }).getByRole('button', { name: '智能整理' }).click();
+  await nav(page, '智能整理');
   await page.getByRole('checkbox', { name: /^其他书签/ }).click();
   await page.getByRole('button', { name: '开始整理' }).click();
   await page.getByText('已完成，去右侧预览并确认').waitFor();
   await page.getByText(/思考过程/).first().waitFor();
-  console.log('PASS: 显示了步骤链和思考过程');
+  check(true, '显示了步骤链和思考过程');
   await page.getByRole('button', { name: '预览并确认整理' }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: '确认整理' }).click();
   await page.getByText(/已移动 4 个书签/).waitFor();
@@ -120,11 +87,12 @@ try {
     const left = (await chrome.bookmarks.getChildren('2')).map((c) => c.title);
     return { frontend: titles(find(docs ?? {}, '前端')), tutorials: titles(find(bar, '教程')), left };
   });
-  if (JSON.stringify(after) !== JSON.stringify({ frontend: ['React 文档', 'Vue 指南'], tutorials: ['Go 教程', 'Rust 教程'], left: [] })) {
-    fail(`整理结果不对：${JSON.stringify(after)}`);
-  } else console.log('PASS: 书签已按体系移动，移空的旧目录已删除');
+  check(
+    JSON.stringify(after) === JSON.stringify({ frontend: ['React 文档', 'Vue 指南'], tutorials: ['Go 教程', 'Rust 教程'], left: [] }),
+    `书签已按体系移动，移空的旧目录已删除 ${JSON.stringify(after)}`,
+  );
 
-  await page.getByRole('button', { name: '操作记录' }).click();
+  await nav(page, '操作记录');
   await page.getByRole('button', { name: '撤销' }).first().click();
   // 提示「已撤销 N 项操作」和列表里的「已撤销」会同时出现，取第一个避免严格模式报错
   await page.getByText(/已撤销/).first().waitFor();
@@ -135,18 +103,16 @@ try {
     const oldChildren = old ? (await chrome.bookmarks.getChildren(old.id)).map((c) => c.title) : [];
     return { back, barFolders, oldChildren };
   }, otherId);
-  if (restored.back.length !== 4 || restored.barFolders.length !== 0 || restored.oldChildren.join() !== 'Rust 教程') fail(`撤销后未恢复：${JSON.stringify(restored)}`);
-  else console.log('PASS: 撤销后书签和旧目录回到原处，新建目录已删除');
+  check(
+    restored.back.length === 4 && restored.barFolders.length === 0 && restored.oldChildren.join() === 'Rust 教程',
+    `撤销后书签和旧目录回到原处，新建目录已删除 ${JSON.stringify(restored)}`,
+  );
+} catch (e) {
+  check(false, e instanceof Error ? e.message : String(e));
 } finally {
-  // 关闭 persistent context 在 Windows 上偶尔挂住，限时 5 秒
-  await Promise.race([ctx.close().catch(() => {}), new Promise((r) => setTimeout(r, 5000))]);
+  await close();
   // 浏览器留下的 keep-alive 连接会让 close() 一直等，先断开
   server.closeAllConnections();
   server.close();
-  fs.rmSync(extDir, { recursive: true, force: true });
-  // 浏览器没退干净时用户目录可能被占用，留在临时目录即可
-  try {
-    fs.rmSync(userDataDir, { recursive: true, force: true });
-  } catch {}
 }
 process.exit(process.exitCode ?? 0);

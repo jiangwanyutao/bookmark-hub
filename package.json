@@ -12,7 +12,7 @@
     "zip": "wxt zip",
     "compile": "tsc --noEmit",
     "test": "vitest run",
-    "e2e": "pnpm build && node e2e/agent-organize.mjs",
+    "e2e": "pnpm build && node e2e/pages.mjs && node e2e/agent-organize.mjs",
     "postinstall": "wxt prepare"
   },
   "dependencies": {

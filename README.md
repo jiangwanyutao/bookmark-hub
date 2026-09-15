@@ -185,7 +185,7 @@ pnpm dev            # 启动开发模式，自动打开加载了扩展的浏览�
 pnpm dev:edge       # 在 Edge 里开发
 pnpm compile        # 类型检查
 pnpm test           # 单元测试（Vitest）
-pnpm e2e            # 构建后跑端到端测试（Playwright，用本地假模型走完智能整理与撤销）
+pnpm e2e            # 构建后跑端到端测试（Playwright 无头 Chromium；覆盖浏览、清理、撤销、设置，以及用本地假模型走完智能整理）
 pnpm zip            # 打包成 zip
 ```
 

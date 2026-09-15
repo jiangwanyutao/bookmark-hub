@@ -21,3 +21,7 @@ jobs:
       - run: pnpm compile
       - run: pnpm test
       - run: pnpm build
+      # 端到端测试：无头 Chromium 加载扩展，覆盖浏览、清理、撤销、设置和智能整理（本地假模型，不访问外网）
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: node e2e/pages.mjs
+      - run: node e2e/agent-organize.mjs
