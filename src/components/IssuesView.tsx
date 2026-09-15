@@ -286,6 +286,7 @@ export function IssuesView({ kind, bookmarks }: { kind: IssueKind; bookmarks: Bo
           <summary className="flex items-center gap-1.5 text-muted-foreground">
             <ChevronRight className="size-4 transition-transform group-open:rotate-90" />
             已忽略 {ignoredIssues.length} 条
+            <span className="ml-auto text-xs">这些不会再出现在上面的列表里</span>
           </summary>
           <ul className="mt-2 max-h-40 divide-y overflow-auto">
             {ignoredIssues.map((issue) => (
@@ -341,13 +342,20 @@ function IssueRow({
   const id = `issue-${bookmark.id}`;
   const name = bookmark.title || bookmark.url;
   return (
-    <li className="group flex items-start gap-3 px-4 py-3 hover:bg-muted/40">
+    <li className="group flex items-start gap-3 px-4 py-2.5 hover:bg-muted/40">
       <Checkbox id={id} className="mt-1" checked={checked} onCheckedChange={(on) => onCheckedChange(on === true)} />
       <Favicon key={bookmark.id} url={bookmark.url} name={bookmark.title || bookmark.url} className="mt-0.5 size-5 rounded" />
       <label htmlFor={id} className="min-w-0 flex-1 cursor-pointer space-y-0.5">
         <span className="block truncate text-sm font-medium">{bookmark.title || bookmark.url}</span>
-        <span className="block font-mono text-xs break-all text-muted-foreground">{bookmark.url}</span>
-        {result.redirectTo && <span className="block text-xs break-all text-primary">→ {result.redirectTo}</span>}
+        {/* 网址单行截断，行高整齐；完整网址悬停可见 */}
+        <span className="block truncate font-mono text-xs text-muted-foreground" title={bookmark.url}>
+          {bookmark.url}
+        </span>
+        {result.redirectTo && (
+          <span className="block truncate text-xs text-primary" title={result.redirectTo}>
+            → {result.redirectTo}
+          </span>
+        )}
         <span className="flex flex-wrap items-center gap-2 pt-1 text-xs text-muted-foreground">
           {result.failReason && (
             <Pill tone={tone}>
@@ -359,8 +367,13 @@ function IssueRow({
           <span>· {new Date(result.checkedAt).toLocaleString('zh-CN')} 检测</span>
         </span>
       </label>
-      {/* 单条操作：悬停或键盘聚焦到这一行时出现 */}
-      <div className="flex shrink-0 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+      {/* 单条操作：悬停、键盘聚焦或已勾选时出现 */}
+      <div
+        className={cn(
+          'flex shrink-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100',
+          checked ? 'opacity-100' : 'opacity-0',
+        )}
+      >
         <Button size="icon" variant="ghost" disabled={busy} aria-label={`重新检测 ${name}`} title="重新检测" onClick={onRecheck}>
           <RefreshCw />
         </Button>
