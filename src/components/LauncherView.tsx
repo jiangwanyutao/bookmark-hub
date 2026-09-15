@@ -5,7 +5,7 @@ import { useTags } from '@/hooks/useTags';
 import { searchBookmarks, type BookmarkIndex, type TreeNode } from '@/lib/bookmarks';
 import { categorize, sectionsForTab, subfolderTabs, toNavigableUrl, type TileItem } from '@/lib/launcher';
 import { cn } from '@/lib/utils';
-import { faviconUrl } from '@/lib/favicon';
+import { Favicon } from './Favicon';
 import { PageHeader } from './PageHeader';
 import { Panel } from './Panel';
 
@@ -36,9 +36,15 @@ const siteName = (url: string) => {
   }
 };
 
+// 同一网站稳定得到同一个底色，没有图标的磁贴之间也能分辨
+const tintOf = (url: string) => {
+  let hash = 0;
+  for (const ch of siteName(url)) hash = (hash * 31 + ch.charCodeAt(0)) % 997;
+  return `color-mix(in srgb, var(--primary) ${18 + (hash % 27)}%, var(--muted))`;
+};
+
 // 在 Dashboard 里使用，一律在新标签页打开，不把 Dashboard 本身跳走
 function Tile({ item }: { item: TileItem }) {
-  const [broken, setBroken] = useState(false);
   const name = item.title || siteName(item.url);
   return (
     <a
@@ -46,23 +52,23 @@ function Tile({ item }: { item: TileItem }) {
       target="_blank"
       rel="noreferrer"
       title={`${name}\n${item.url}`}
-      className="group flex min-w-0 flex-col items-center gap-1.5 rounded-lg p-2.5 outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring"
+      className="group flex min-w-0 flex-col items-center gap-2 rounded-lg p-3 outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <span className="flex size-12 items-center justify-center overflow-hidden rounded-lg border bg-background transition-transform duration-200 motion-safe:group-hover:-translate-y-0.5">
-        {broken ? (
-          <span className="text-xl font-semibold text-primary">{name.slice(0, 1).toUpperCase()}</span>
-        ) : (
-          <img src={faviconUrl(item.url)} alt="" width={28} height={28} onError={() => setBroken(true)} />
-        )}
-      </span>
+      <Favicon
+        url={item.url}
+        name={name}
+        style={{ background: tintOf(item.url) }}
+        className="size-16 rounded-xl text-2xl text-foreground transition-transform duration-200 motion-safe:group-hover:-translate-y-0.5"
+      />
       <span className="w-full truncate text-center text-sm">{name}</span>
     </a>
   );
 }
 
+// 磁贴设上限并靠左，少量磁贴不会被拉成大块
 function TileGrid({ items }: { items: TileItem[] }) {
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(6rem,1fr))] gap-2">
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(7.25rem,8.25rem))] justify-start gap-2">
       {items.map((item) => (
         <Tile key={item.id} item={item} />
       ))}
@@ -86,6 +92,10 @@ export function LauncherView({ roots, index }: Props) {
   const tabs = selected ? subfolderTabs(selected.sections) : [];
   const activeTab = tab !== null && tabs.includes(tab) ? tab : null;
   const results = query.trim() ? searchBookmarks(index.bookmarks, query, tags) : null;
+  const maxCount = Math.max(1, ...categories.map((c) => c.count));
+  const itemCount = (tabLabel: string | null) =>
+    selected ? sectionsForTab(selected.sections, tabLabel).reduce((sum, s) => sum + s.items.length, 0) : 0;
+  const sharePercent = selected && index.bookmarks.length > 0 ? Math.round((selected.count / index.bookmarks.length) * 100) : 0;
 
   function select(id: string) {
     setSelectedId(id);
@@ -113,8 +123,11 @@ export function LauncherView({ roots, index }: Props) {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onKeyDown={handleKeyDown}
-        className="h-9 w-full rounded-lg border bg-card pr-3 pl-9 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="h-9 w-full rounded-lg border bg-card pr-14 pl-9 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
       />
+      <kbd className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 rounded border bg-muted px-1.5 text-xs text-muted-foreground">
+        回车
+      </kbd>
     </div>
   );
 
@@ -146,12 +159,18 @@ export function LauncherView({ roots, index }: Props) {
                     type="button"
                     onClick={() => select(c.id)}
                     className={cn(
-                      'flex shrink-0 items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
+                      'flex shrink-0 flex-col gap-1.5 rounded-md px-3 py-2 text-left text-sm outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
                       isActive && 'bg-accent font-medium text-accent-foreground hover:bg-accent',
                     )}
                   >
-                    <span className="truncate">{c.name}</span>
-                    <span className={cn('text-xs tabular-nums', isActive ? 'text-accent-foreground' : 'text-muted-foreground')}>{c.count}</span>
+                    <span className="flex w-full items-center justify-between gap-2">
+                      <span className="truncate">{c.name}</span>
+                      <span className={cn('text-xs tabular-nums', isActive ? 'text-accent-foreground' : 'text-muted-foreground')}>{c.count}</span>
+                    </span>
+                    {/* 条长是占最大分类的比例，方便横向比较 */}
+                    <span aria-hidden className={cn('h-[3px] w-full overflow-hidden rounded-full', isActive ? 'bg-accent-foreground/15' : 'bg-muted')}>
+                      <span className="block h-full rounded-full bg-primary" style={{ width: `${(c.count / maxCount) * 100}%` }} />
+                    </span>
                   </button>
                 );
               })}
@@ -177,6 +196,9 @@ export function LauncherView({ roots, index }: Props) {
                       )}
                     >
                       {label}
+                      <span className={cn('ml-1.5 text-xs tabular-nums', isActive ? 'text-accent-foreground' : 'text-muted-foreground')}>
+                        {itemCount(value)}
+                      </span>
                     </button>
                   );
                 })}
@@ -196,6 +218,12 @@ export function LauncherView({ roots, index }: Props) {
                     <TileGrid items={s.items} />
                   </div>
                 ))}
+            </div>
+            <div className="flex shrink-0 items-center justify-between gap-3 border-t px-4 py-2 text-xs text-muted-foreground tabular-nums">
+              <span>占全部书签的 {sharePercent}%</span>
+              <span>
+                {itemCount(activeTab)} 个{activeTab ? ` · 已筛选「${activeTab}」` : ''}
+              </span>
             </div>
           </section>
         </div>
