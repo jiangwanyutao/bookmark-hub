@@ -9,6 +9,8 @@ export interface AiConfig {
   apiKey: string;
   model: string;
   privacy: Privacy;
+  /** 最近一次连接测试通过的时间；旧配置没有这个字段 */
+  verifiedAt?: number;
 }
 
 const STORAGE_KEY = 'aiConfig';

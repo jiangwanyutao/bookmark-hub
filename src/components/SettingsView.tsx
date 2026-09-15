@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
-import { Plus, X } from 'lucide-react';
+import { Globe, Plus, X } from 'lucide-react';
 import { getHubCtx } from '@/lib/hubContext';
+import { hostOf } from '@/lib/scan/classify';
 import { addVpnHosts, removeVpnHost, type VpnHost } from '@/lib/scan/scanner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,10 +25,20 @@ function parseHost(value: string): string | null {
 export function SettingsView() {
   const [hosts, setHosts] = useState<VpnHost[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // host → 标为「可能需要 VPN」的扫描结果数，0 表示这条记录还没起作用
+  const [impact, setImpact] = useState<Map<string, number>>(new Map());
 
   const reload = useCallback(async () => {
     const { db } = await getHubCtx();
-    setHosts(await db.getAll('vpnHosts'));
+    const [vpnHosts, results] = await Promise.all([db.getAll('vpnHosts'), db.getAll('scanResults')]);
+    const counts = new Map<string, number>();
+    for (const r of results) {
+      if (r.failReason !== 'maybe_vpn') continue;
+      const host = hostOf(r.url);
+      counts.set(host, (counts.get(host) ?? 0) + 1);
+    }
+    setHosts(vpnHosts);
+    setImpact(counts);
   }, []);
 
   useEffect(() => {
@@ -89,13 +100,20 @@ export function SettingsView() {
             )}
           </div>
           {hosts?.length === 0 && (
-            <p className="text-sm text-muted-foreground">还没有添加。也可以在「失效链接」「待确认」里勾选书签后点「需要 VPN」。</p>
+            <div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-6 text-center">
+              <Globe className="size-6 text-muted-foreground" />
+              <p className="text-sm font-medium">还没有添加网站</p>
+              <p className="max-w-xs text-xs text-muted-foreground">上面填一个域名即可。也可以在「失效链接」「待确认」里勾选书签后批量点「需要 VPN」。</p>
+            </div>
           )}
           {hosts && hosts.length > 0 && (
             <ul className="min-h-0 flex-1 divide-y overflow-auto rounded-lg border">
               {hosts.map((h) => (
-                <li key={h.host} className="flex items-center justify-between gap-4 px-3 py-1.5 text-sm">
-                  <span className="min-w-0 truncate">{h.host}</span>
+                <li key={h.host} className="flex items-center justify-between gap-4 px-3 py-2 text-sm">
+                  <span className="flex min-w-0 items-baseline gap-2">
+                    <span className="truncate">{h.host}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground tabular-nums">影响 {impact.get(h.host) ?? 0} 条扫描结果</span>
+                  </span>
                   <Button size="sm" variant="ghost" onClick={() => void handleRemove(h.host)} aria-label={`移除 ${h.host}`}>
                     <X />
                     移除

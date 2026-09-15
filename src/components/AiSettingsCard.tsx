@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { loadAiConfig, normalizeBaseUrl, requestAiHostPermission, saveAiConfig, type AiConfig } from '@/lib/ai/config';
 import { testConnection } from '@/lib/ai/client';
 import { PRIVACY_LABEL, type Privacy } from '@/lib/ai/prompt';
+import { clockTime, dayLabel } from '@/lib/relativeTime';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,10 +45,11 @@ export function AiSettingsCard() {
       return;
     }
 
-    const config: AiConfig = { baseUrl, apiKey, model, privacy };
     setTesting(true);
     try {
-      await testConnection(config);
+      await testConnection({ baseUrl, apiKey, model, privacy });
+      // 只在测试通过时记下时间
+      const config: AiConfig = { baseUrl, apiKey, model, privacy, verifiedAt: Date.now() };
       await saveAiConfig(config);
       setSaved(config);
       toast.success('连接成功，已保存');
@@ -100,11 +102,17 @@ export function AiSettingsCard() {
             {error}
           </p>
         )}
-        <div className="sm:col-span-2">
+        <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
           <Button type="submit" disabled={testing}>
             {testing && <Loader2 className="animate-spin" />}
             {testing ? '正在测试连接…' : '保存并测试连接'}
           </Button>
+          {/* 保存必须先通过测试，旧配置只是没记下时间 */}
+          {saved && (
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {saved.verifiedAt ? `${dayLabel(saved.verifiedAt)} ${clockTime(saved.verifiedAt)} 连接正常` : '已配置'}
+            </span>
+          )}
         </div>
       </form>
     </div>
