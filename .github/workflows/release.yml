@@ -1,0 +1,51 @@
+# 推送 v* 标签时打包 Chrome / Edge 并发布到 GitHub Releases；
+# 手动运行（Actions 页面 → Release → Run workflow）只产出构建产物，不发布。
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm compile
+      - run: pnpm test
+
+      # 标签版本必须和 package.json 一致，否则 zip 文件名和扩展版本号对不上
+      - name: Check tag matches package.json version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          PKG_VERSION="v$(node -p "require('./package.json').version")"
+          if [ "$PKG_VERSION" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::标签 $GITHUB_REF_NAME 与 package.json 版本 $PKG_VERSION 不一致"
+            exit 1
+          fi
+
+      - run: pnpm zip
+      - run: pnpm zip -b edge
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bookmark-hub-${{ github.ref_name }}
+          path: .output/*.zip
+
+      - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: .output/*.zip
+          generate_release_notes: true
