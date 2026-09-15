@@ -5,7 +5,6 @@ import { findDuplicateGroups, redundantCount, type DuplicateGroup, type Duplicat
 import type { Intent } from '@/lib/history';
 import { runBatch } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Lighthouse } from './brand/Lighthouse';
 import { Favicon } from './Favicon';
@@ -24,6 +23,13 @@ const TIER_TONE: Record<DuplicateTier, PillTone> = {
   exact: 'ok',
   normalized: 'ok',
   suspect: 'warn',
+};
+
+// 与 lib/duplicates.ts 的判重规则对应
+const TIER_REASON: Record<DuplicateTier, string> = {
+  exact: '网址完全相同',
+  normalized: '只差 http/https、结尾斜杠或跟踪参数',
+  suspect: '去掉 www. 或页内锚点后相同，可能是同一个页面',
 };
 
 const removeOthers = (group: DuplicateGroup, keepId: string): Intent[] =>
@@ -78,7 +84,9 @@ export function DuplicatesView({ index }: { index: BookmarkIndex }) {
                 <div className="flex flex-wrap items-center gap-2">
                   <Pill tone={TIER_TONE[g.tier]}>{TIER_LABEL[g.tier]}</Pill>
                   {g.crossFolder && <Pill>跨目录</Pill>}
-                  <span className="text-sm text-muted-foreground tabular-nums">{g.bookmarks.length} 条</span>
+                  <span className="text-sm text-muted-foreground tabular-nums">
+                    {g.bookmarks.length} 条 · {TIER_REASON[g.tier]}
+                  </span>
                   <Button
                     variant="outline"
                     size="sm"
@@ -89,24 +97,38 @@ export function DuplicatesView({ index }: { index: BookmarkIndex }) {
                     {keepId ? `保留选中，删除其余 ${g.bookmarks.length - 1} 条` : '先选择要保留的一条'}
                   </Button>
                 </div>
+                {g.defaultKeepId !== null && <p className="mt-1 text-xs text-muted-foreground">默认保留添加最早的一条，你可以改选。</p>}
                 <RadioGroup
                   className="mt-2 gap-0.5"
                   value={keepId ?? ''}
                   onValueChange={(id) => setKeepOverrides((prev) => ({ ...prev, [g.key]: id }))}
                   aria-label="选择保留哪一条"
                 >
+                  {/* 整行是 label，内边距和空白处也能选中 */}
                   {g.bookmarks.map((b) => (
-                    <div key={b.id} className="flex items-start gap-3 rounded-lg px-2 py-1.5 hover:bg-muted/50">
-                      <RadioGroupItem value={b.id} id={`keep-${b.id}`} className="mt-1" />
+                    <label key={b.id} htmlFor={`keep-${b.id}`} className="flex cursor-pointer items-start gap-3 rounded-lg px-2 py-2 text-sm hover:bg-muted/50">
+                      {/* 选中态是加粗的主色圆环，比 8px 小圆点醒目 */}
+                      <RadioGroupItem
+                        value={b.id}
+                        id={`keep-${b.id}`}
+                        className="mt-0.5 size-4.5 data-[state=checked]:border-[5px] data-[state=checked]:border-primary [&_[data-slot=radio-group-indicator]]:hidden"
+                      />
                       <Favicon url={b.url} name={b.title || b.url} className="mt-0.5 size-5 rounded" />
-                      <Label htmlFor={`keep-${b.id}`} className="block min-w-0 flex-1 cursor-pointer font-normal">
-                        <span className="block truncate font-medium">{b.title || b.url}</span>
-                        <span className="block text-xs break-all text-muted-foreground">
+                      <span className="block min-w-0 flex-1">
+                        <span className="flex min-w-0 items-center gap-1.5">
+                          <span className="truncate font-medium">{b.title || b.url}</span>
+                          {b.id === g.defaultKeepId && (
+                            <Pill tone="ok" className="shrink-0">
+                              推荐保留
+                            </Pill>
+                          )}
+                        </span>
+                        <span className="block truncate text-xs text-muted-foreground" title={b.url}>
                           {b.url} · {b.folderPath}
                           {b.dateAdded ? ` · ${new Date(b.dateAdded).toLocaleDateString('zh-CN')} 添加` : ''}
                         </span>
-                      </Label>
-                    </div>
+                      </span>
+                    </label>
                   ))}
                 </RadioGroup>
               </li>

@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ComponentType } from 'react';
 import { toast } from 'sonner';
-import { ArchiveRestore, Undo2 } from 'lucide-react';
+import { ArchiveRestore, CircleDot, CornerUpRight, Pencil, Plus, Sparkles, Trash2, Undo2 } from 'lucide-react';
+import { clockTime, groupByDay, relativeTime } from '@/lib/relativeTime';
 import { buildIndex } from '@/lib/bookmarks';
 import { listBatches, listSnapshots, type Batch, type Op, type Snapshot } from '@/lib/history';
 import { diffSnapshot, toRestoreIntents, type SnapshotDiff } from '@/lib/snapshotDiff';
@@ -28,6 +29,19 @@ const ACTION_LABEL: Record<Op['action'], string> = {
   UPDATE: '编辑',
   CREATE: '新建',
 };
+
+type Icon = ComponentType<{ className?: string }>;
+
+const ACTION_ICON: Record<Op['action'], Icon> = {
+  REMOVE: Trash2,
+  MOVE: CornerUpRight,
+  UPDATE: Pencil,
+  CREATE: Plus,
+};
+
+// 智能整理的批次标签含「整理」，用它自己的图标；否则按第一个操作的类型
+const batchIcon = (batch: Batch): Icon =>
+  batch.label.includes('整理') ? Sparkles : batch.ops[0] ? ACTION_ICON[batch.ops[0].action] : CircleDot;
 
 const errorMessage = (e: unknown) => (e instanceof Error ? e.message : String(e));
 const formatTime = (ms: number) => new Date(ms).toLocaleString('zh-CN');
@@ -95,38 +109,51 @@ export function HistoryView() {
           {error && <p className="p-4 text-sm text-destructive">读取操作记录失败：{error}</p>}
           {batches?.length === 0 && <p className="p-4 text-sm text-muted-foreground">还没有操作记录。编辑、移动、删除书签后会出现在这里。</p>}
           {batches && batches.length > 0 && (
-            // 时间线：圆点表示一次批量操作，已撤销的变灰
-            <ol className="mx-5 my-3 border-l">
-              {batches.map((b) => {
-                const undone = b.undoneAt !== null;
-                return (
-                  <li key={b.id} className="relative flex items-center justify-between gap-4 py-2.5 pl-5">
-                    <span
-                      aria-hidden
-                      className={cn(
-                        'absolute top-1/2 -left-[5px] size-2.5 -translate-y-1/2 rounded-full ring-4 ring-card',
-                        undone ? 'bg-muted-foreground/40' : 'bg-primary',
-                      )}
-                    />
-                    <div className="min-w-0">
-                      <p className={cn('text-sm font-medium', undone && 'text-muted-foreground')}>{b.label}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatTime(b.createdAt)} · {summarize(b)}
-                        {b.snapshotId && ' · 已创建恢复点'}
-                      </p>
-                    </div>
-                    {undone ? (
-                      <Pill>已撤销</Pill>
-                    ) : (
-                      <Button variant="outline" size="sm" className="shrink-0" onClick={() => void handleUndo(b.id)}>
-                        <Undo2 />
-                        撤销
-                      </Button>
-                    )}
-                  </li>
-                );
-              })}
-            </ol>
+            // 时间线按天分组；圆点带操作类型图标，已撤销的变灰
+            <div className="py-3">
+              {groupByDay(batches, (b) => b.createdAt).map((day, i) => (
+                <div key={`${day.label}-${i}`} className="mb-4 last:mb-0">
+                  <p className="mb-1 px-5 text-xs font-medium text-muted-foreground">{day.label}</p>
+                  <ol className="mx-5 border-l">
+                    {day.items.map((b) => {
+                      const undone = b.undoneAt !== null;
+                      const DotIcon = batchIcon(b);
+                      return (
+                        <li key={b.id} className="relative flex items-center justify-between gap-4 py-2.5 pl-5">
+                          <span
+                            aria-hidden
+                            className={cn(
+                              'absolute top-1/2 -left-[9px] flex size-4 -translate-y-1/2 items-center justify-center rounded-full ring-4 ring-card',
+                              undone ? 'bg-muted-foreground/40 text-card' : 'bg-primary text-primary-foreground',
+                            )}
+                          >
+                            <DotIcon className="size-2.5" />
+                          </span>
+                          <div className="min-w-0">
+                            <p className={cn('text-sm font-medium', undone && 'text-muted-foreground')}>{b.label}</p>
+                            <p className="text-xs text-muted-foreground">
+                              <time dateTime={new Date(b.createdAt).toISOString()} title={formatTime(b.createdAt)} className="tabular-nums">
+                                {clockTime(b.createdAt)}
+                              </time>{' '}
+                              · {summarize(b)}
+                              {b.snapshotId && ' · 已创建恢复点'}
+                            </p>
+                          </div>
+                          {undone ? (
+                            <Pill>已撤销</Pill>
+                          ) : (
+                            <Button variant="outline" size="sm" className="shrink-0" onClick={() => void handleUndo(b.id)}>
+                              <Undo2 />
+                              撤销
+                            </Button>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </div>
+              ))}
+            </div>
           )}
         </Panel>
 
@@ -144,7 +171,9 @@ export function HistoryView() {
                     <ArchiveRestore className="size-4 shrink-0 text-muted-foreground" />
                     <div className="min-w-0">
                       <p className="text-sm font-medium tabular-nums">{formatTime(s.createdAt)}</p>
-                      <p className="text-xs text-muted-foreground">当时有 {s.bookmarkCount.toLocaleString('zh-CN')} 个书签</p>
+                      <p className="text-xs text-muted-foreground tabular-nums">
+                        {relativeTime(s.createdAt)} · 当时有 {s.bookmarkCount.toLocaleString('zh-CN')} 个书签
+                      </p>
                     </div>
                   </div>
                   <Button variant="outline" size="sm" className="shrink-0" onClick={() => void openPreview(s)}>
