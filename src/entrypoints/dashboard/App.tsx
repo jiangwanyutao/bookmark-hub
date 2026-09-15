@@ -31,6 +31,7 @@ import { SettingsView } from '@/components/SettingsView';
 import { AgentOrganizeView } from '@/components/AgentOrganizeView';
 import { LauncherView } from '@/components/LauncherView';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { Lighthouse } from '@/components/brand/Lighthouse';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Toaster } from '@/components/ui/sonner';
@@ -124,7 +125,10 @@ export function App() {
     <div className="grid h-screen grid-cols-[56px_minmax(0,1fr)] grid-rows-[56px_minmax(0,1fr)] bg-background xl:grid-cols-[232px_minmax(0,1fr)]">
       <header className="col-span-2 flex items-center gap-4 border-b bg-sidebar px-3.5 xl:px-4">
         <span className="flex shrink-0 items-center gap-2.5 text-[15px] font-semibold tracking-tight xl:w-[200px]">
-          <img src="/icon-48.png" alt="" className="size-7 rounded-md" />
+          {/* 矢量 logo：PNG 缩到 28px 会发虚；薄荷方块 + 灯塔，暗色下跟随品牌色令牌 */}
+          <span aria-hidden className="flex size-7 shrink-0 items-end justify-center overflow-hidden rounded-lg bg-[var(--brand-mint)]">
+            <Lighthouse className="h-6 w-auto translate-y-0.5" />
+          </span>
           <span className="sr-only xl:not-sr-only">Bookmark Hub</span>
         </span>
         <div className="relative w-full max-w-md">

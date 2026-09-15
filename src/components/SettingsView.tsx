@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AiSettingsCard } from './AiSettingsCard';
-import { PageHeader } from './PageHeader';
+import { PageHeader, pageLayout } from './PageHeader';
 import { Panel } from './Panel';
 
 /** 接受「wiki.company.com」或整条网址，取出域名；无效时返回 null。 */
@@ -69,7 +69,7 @@ export function SettingsView() {
   }
 
   return (
-    <div className="flex h-full min-h-[560px] flex-col gap-4 px-6 py-5">
+    <div className={pageLayout()}>
       <PageHeader title="设置" subtitle="配置 AI 整理服务，以及需要 VPN 才能访问的网站。" />
 
       {/* 两块等高面板，内容多时各自滚动 */}

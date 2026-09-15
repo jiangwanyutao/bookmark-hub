@@ -1,5 +1,12 @@
 import type { ReactNode } from 'react';
 
+/**
+ * 页面外框：铺满主区域，页头与面板之间 gap-4。
+ * 最小高度是「一屏放下」的下限，视口更矮时主区域滚动：总览多一行统计卡用 640px，智能整理 600px，其余 560px。
+ * 类名写成字面量，Tailwind 才扫描得到。
+ */
+export const pageLayout = (minHeight = 'min-h-[560px]') => `flex h-full ${minHeight} flex-col gap-4 px-6 py-5`;
+
 /** 页头：标题 + 一行灰色副标题 + 右侧操作。 */
 export function PageHeader({ title, subtitle, actions }: { title: ReactNode; subtitle?: ReactNode; actions?: ReactNode }) {
   return (

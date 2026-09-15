@@ -5,7 +5,7 @@ import { useScanResults } from '@/hooks/useScanResults';
 import { FolderTree } from './FolderTree';
 import { BookmarkList } from './BookmarkList';
 import { BookmarkDetail } from './BookmarkDetail';
-import { PageHeader } from './PageHeader';
+import { PageHeader, pageLayout } from './PageHeader';
 
 interface Props {
   roots: TreeNode[];
@@ -38,7 +38,7 @@ export function BookmarksView({ roots, index, query, folderId, onSelectFolder, o
 
   // 三栏面板：目录 / 列表 / 详情，各自滚动；低于 lg 时详情挪到下面一整行
   return (
-    <div className="flex h-full min-h-[560px] flex-col gap-4 px-6 py-5">
+    <div className={pageLayout()}>
       <PageHeader
         title={folderName}
         subtitle={`${visible.length.toLocaleString('zh-CN')} 个书签${query ? ` · 搜索「${query}」` : ''}`}

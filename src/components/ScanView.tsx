@@ -5,7 +5,7 @@ import { useScan } from '@/hooks/useScan';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { CountUp } from './CountUp';
-import { PageHeader } from './PageHeader';
+import { PageHeader, pageLayout } from './PageHeader';
 import { Panel } from './Panel';
 import { Pill } from './Pill';
 
@@ -80,7 +80,7 @@ export function ScanView({ bookmarks }: { bookmarks: Bookmark[] }) {
   );
 
   return (
-    <div className="flex h-full min-h-[560px] flex-col gap-4 px-6 py-5">
+    <div className={pageLayout()}>
       <PageHeader title="健康扫描" subtitle="检查每个书签能否打开。请求不带你的登录信息，内网地址和带登录凭据的链接不会被请求。" actions={actions} />
 
       {permitted === false && (

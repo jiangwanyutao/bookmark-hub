@@ -24,7 +24,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Lighthouse } from './brand/Lighthouse';
 import { Favicon } from './Favicon';
-import { PageHeader } from './PageHeader';
+import { PageHeader, pageLayout } from './PageHeader';
 import { Panel } from './Panel';
 import { Pill, type PillTone } from './Pill';
 
@@ -212,7 +212,7 @@ export function IssuesView({ kind, bookmarks }: { kind: IssueKind; bookmarks: Bo
     ) : undefined;
 
   return (
-    <div className="flex h-full min-h-[560px] flex-col gap-4 px-6 py-5">
+    <div className={pageLayout()}>
       <PageHeader title={config.title} subtitle={`共 ${active.length} 条。${config.description}`} actions={filter} />
 
       {shown.length === 0 ? (

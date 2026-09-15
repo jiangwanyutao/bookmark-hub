@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Lighthouse } from './brand/Lighthouse';
 import { Favicon } from './Favicon';
-import { PageHeader } from './PageHeader';
+import { PageHeader, pageLayout } from './PageHeader';
 import { Panel } from './Panel';
 import { Pill, type PillTone } from './Pill';
 
@@ -60,7 +60,7 @@ export function DuplicatesView({ index }: { index: BookmarkIndex }) {
   }
 
   return (
-    <div className="flex h-full min-h-[560px] flex-col gap-4 px-6 py-5">
+    <div className={pageLayout()}>
       <PageHeader
         title={`重复书签 ${groups.length} 组`}
         subtitle={`共 ${redundantCount(groups)} 条多余。跨目录和疑似重复的需要你逐组选择保留哪一条。`}

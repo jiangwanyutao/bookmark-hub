@@ -11,7 +11,7 @@ import { useOrganizeAgent } from '@/hooks/useOrganizeAgent';
 import { useTags } from '@/hooks/useTags';
 import { Button } from '@/components/ui/button';
 import { AiTagsCard } from './AiTagsCard';
-import { PageHeader } from './PageHeader';
+import { PageHeader, pageLayout } from './PageHeader';
 import { Pill } from './Pill';
 import { ChatPanel } from './agent/ChatPanel';
 import { PlanPanel } from './agent/PlanPanel';
@@ -80,7 +80,7 @@ export function AgentOrganizeView({ index, roots, onOpenSettings }: Props) {
   }
 
   return (
-    <div className="flex h-full min-h-[600px] flex-col gap-4 px-6 py-5">
+    <div className={pageLayout('min-h-[600px]')}>
       <PageHeader
         title="智能整理"
         subtitle="智能体按你勾选的范围提出分类体系，你确认后才会移动书签，执行前自动创建恢复点。"

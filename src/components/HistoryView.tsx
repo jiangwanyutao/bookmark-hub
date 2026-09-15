@@ -19,7 +19,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-import { PageHeader } from './PageHeader';
+import { PageHeader, pageLayout } from './PageHeader';
 import { Panel } from './Panel';
 import { Pill } from './Pill';
 
@@ -100,7 +100,7 @@ export function HistoryView() {
   const nothingToRestore = diff ? diff.missing.length + diff.moved.length + diff.changed.length === 0 : true;
 
   return (
-    <div className="flex h-full min-h-[560px] flex-col gap-4 px-6 py-5">
+    <div className={pageLayout()}>
       <PageHeader title="操作记录" subtitle="每次批量改动都记在这里，可以单独撤销。撤销时会跳过你之后在浏览器里手动改过的书签。" />
 
       {/* 左右两块等高：操作时间线 + 恢复点，各自在面板内滚动 */}

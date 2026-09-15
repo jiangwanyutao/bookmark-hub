@@ -13,7 +13,7 @@ import { Bookshelf } from './Bookshelf';
 import { CountUp } from './CountUp';
 import { DistributionBars } from './DistributionBars';
 import { Favicon } from './Favicon';
-import { PageHeader } from './PageHeader';
+import { PageHeader, pageLayout } from './PageHeader';
 import { Panel } from './Panel';
 import { Pill, type PillTone } from './Pill';
 
@@ -160,7 +160,7 @@ export function Overview({ index, roots, barId, onNavigate, onOpenFolder }: Prop
 
   // 一屏完成：统计卡一行，下面分布面板与右侧两块等分面板等高，长内容在面板内滚动
   return (
-    <div className="flex h-full min-h-[640px] flex-col gap-4 px-6 py-5">
+    <div className={pageLayout('min-h-[640px]')}>
       <PageHeader
         title="总览"
         subtitle={`共 ${formatCount(index.bookmarks.length)} 个书签、${formatCount(index.folderCount)} 个文件夹，所有改动都能在「操作记录」里撤销。`}

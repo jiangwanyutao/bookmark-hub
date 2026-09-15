@@ -6,7 +6,7 @@ import { searchBookmarks, type BookmarkIndex, type TreeNode } from '@/lib/bookma
 import { categorize, sectionsForTab, subfolderTabs, toNavigableUrl, type TileItem } from '@/lib/launcher';
 import { cn } from '@/lib/utils';
 import { Favicon } from './Favicon';
-import { PageHeader } from './PageHeader';
+import { PageHeader, pageLayout } from './PageHeader';
 import { Panel } from './Panel';
 
 const SELECTED_KEY = 'launcher:category';
@@ -133,7 +133,7 @@ export function LauncherView({ roots, index }: Props) {
 
   // 一屏完成：分类栏和图标区是两个面板，各自滚动
   return (
-    <div className="flex h-full min-h-[560px] flex-col gap-4 px-6 py-5">
+    <div className={pageLayout()}>
       <PageHeader title="书签导航" subtitle="按目录浏览常用网站，在新标签页打开。" actions={search} />
 
       {results ? (
