@@ -99,7 +99,9 @@ try {
 
   // ---------- 设置：需要 VPN 的网站 ----------
   await nav(page, '设置');
-  check(await page.getByText('还没有添加网站').isVisible(), 'VPN 列表为空时显示空状态');
+  // 列表是异步读出来的，等空状态出现，不能立刻判断可见（CI 机器快时会先看到加载前的空白）
+  await page.getByText('还没有添加网站').waitFor();
+  check(true, 'VPN 列表为空时显示空状态');
   await page.getByLabel('网站域名').fill('github.com');
   await page.getByRole('button', { name: '添加', exact: true }).click();
   await page.getByText(/影响 \d+ 条扫描结果/).first().waitFor();
