@@ -74,6 +74,16 @@ try {
   await page.getByText('已忽略 1 条').first().waitFor();
   check((await page.locator('main li.group', { hasText: 'wiki.corp-example.com' }).count()) === 0, '行内忽略后这一行移到已忽略');
 
+  // 误报纠正：打开看过确认能访问的，标为「其实能用」后离开失效列表
+  const deadRow = page.locator('main li.group', { hasText: 'blog.example-dead.com' });
+  await deadRow.hover();
+  await deadRow.getByRole('button', { name: /其实能用$/ }).click();
+  await page.getByText('已标记 1 条为可以访问').first().waitFor();
+  check(
+    (await page.locator('main li.group', { hasText: 'blog.example-dead.com' }).count()) === 0,
+    '标记「其实能用」后这一行离开失效列表',
+  );
+
   // ---------- 重定向：更新网址 ----------
   await nav(page, '重定向');
   await page.getByRole('button', { name: '更新网址' }).click();

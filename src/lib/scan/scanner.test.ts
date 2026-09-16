@@ -8,6 +8,7 @@ import {
   PROBE_URLS,
   addVpnHosts,
   cancelScan,
+  markUserVerified,
   probeNetwork,
   recheckUrls,
   runScan,
@@ -239,3 +240,45 @@ function resultFor(url: string) {
     checkedAt: 1,
   };
 }
+
+describe('markUserVerified', () => {
+  const brokenAt = (url: string) => ({ ...resultFor(url), health: 'broken' as const, failReason: 'not_found' as const, httpStatus: 404 });
+
+  it('turns a result the user confirmed works into healthy and records when', async () => {
+    await db.put('scanResults', brokenAt('https://blocked.com/a'));
+
+    await markUserVerified(db, ['https://blocked.com/a'], 7);
+
+    expect(await db.get('scanResults', 'https://blocked.com/a')).toMatchObject({
+      health: 'healthy',
+      failReason: null,
+      userVerified: 7,
+    });
+  });
+
+  it('keeps the confirmation through a later scan that still cannot reach the site', async () => {
+    await db.put('scanResults', brokenAt('https://blocked.com/a'));
+    await markUserVerified(db, ['https://blocked.com/a'], 7);
+
+    await run(deps(async (url) => ({ requestedUrl: url, status: 403, finalUrl: url, redirectStatuses: [] })), ['https://blocked.com/a']);
+
+    expect(await db.get('scanResults', 'https://blocked.com/a')).toMatchObject({
+      health: 'healthy',
+      failReason: null,
+      userVerified: 7,
+    });
+  });
+
+  it('drops the confirmation when the user asks for a recheck', async () => {
+    await db.put('scanResults', brokenAt('https://blocked.com/a'));
+    await markUserVerified(db, ['https://blocked.com/a'], 7);
+
+    await recheckUrls(deps(async (url) => ({ requestedUrl: url, status: 404, finalUrl: url, redirectStatuses: [] })), [
+      'https://blocked.com/a',
+    ]);
+
+    const result = await db.get('scanResults', 'https://blocked.com/a');
+    expect(result).toMatchObject({ health: 'broken', failReason: 'not_found' });
+    expect(result?.userVerified).toBeUndefined();
+  });
+});

@@ -50,6 +50,8 @@ export interface ScanResult extends Verdict {
   netError: string | null;
   networkMode: NetworkMode;
   checkedAt: number;
+  /** 用户打开确认过「其实能用」的时间。有值时扫描不再把它判回失效，重新检测会清除。 */
+  userVerified?: number;
 }
 
 const NETWORK_FAIL_REASONS = new Set<FailReason>(['dns', 'cert', 'timeout', 'connection', 'maybe_vpn']);

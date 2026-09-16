@@ -91,17 +91,41 @@ const countHealth = (results: ScanResult[]) => {
 
 const loadVpnHosts = async (db: IDBPDatabase<HubDB>) => new Set(await db.getAllKeys('vpnHosts'));
 
-async function saveResult(deps: ScanDeps, url: string, obs: Observation, networkMode: NetworkMode, vpnHosts: Set<string>) {
+async function saveResult(
+  deps: ScanDeps,
+  url: string,
+  obs: Observation,
+  networkMode: NetworkMode,
+  vpnHosts: Set<string>,
+  keepUserVerified = true,
+) {
+  const verdict = classify(obs, networkMode, { vpnHost: vpnHosts.has(hostOf(url)) });
+  // 用户亲自打开确认过能用的，扫描再判失效也不推翻；想重测就点「重新检测」
+  const verified = keepUserVerified ? (await deps.db.get('scanResults', url))?.userVerified : undefined;
   const result: ScanResult = {
     url,
-    ...classify(obs, networkMode, { vpnHost: vpnHosts.has(hostOf(url)) }),
+    ...verdict,
+    ...(verified !== undefined && verdict.health !== 'healthy' ? { health: 'healthy' as const, failReason: null } : {}),
     httpStatus: obs.status ?? null,
     netError: obs.netError ?? null,
     networkMode,
     checkedAt: deps.now(),
+    ...(verified !== undefined ? { userVerified: verified } : {}),
   };
   await deps.db.put('scanResults', result);
   return result;
+}
+
+/** 用户打开看过、确认其实能打开：标为正常并记下时间，免得下次扫描又判回失效。 */
+export async function markUserVerified(db: IDBPDatabase<HubDB>, urls: string[], now: number): Promise<void> {
+  const tx = db.transaction('scanResults', 'readwrite');
+  const existing = await Promise.all(urls.map((url) => tx.store.get(url)));
+  await Promise.all([
+    ...existing
+      .filter((r): r is ScanResult => r !== undefined)
+      .map((r) => tx.store.put({ ...r, health: 'healthy' as const, failReason: null, redirectTo: null, userVerified: now })),
+    tx.done,
+  ]);
 }
 
 async function currentRun(deps: ScanDeps): Promise<ScanRun> {
@@ -217,7 +241,8 @@ export async function recheckUrls(deps: ScanDeps, urls: string[]): Promise<Reche
   await runQueue(
     urls,
     async (url) => {
-      await saveResult(deps, url, await deps.check(url, mode), mode, vpnHosts);
+      // 重新检测是「我想重测」，清掉用户之前的「其实能用」标记
+      await saveResult(deps, url, await deps.check(url, mode), mode, vpnHosts, false);
     },
     { concurrency: GLOBAL_CONCURRENCY, perKey: PER_HOST_CONCURRENCY, keyOf: hostOf },
   );

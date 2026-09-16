@@ -4,7 +4,7 @@ import { ChevronRight, CircleCheck, EyeOff, ExternalLink, Globe, RefreshCw, Tras
 import type { Bookmark } from '@/lib/bookmarks';
 import { hostOf, type FailReason } from '@/lib/scan/classify';
 import { collectIssues, FAIL_REASON_LABEL, type Issue, type IssueKind } from '@/lib/scan/issues';
-import { addVpnHosts, recheckUrls, setIgnored } from '@/lib/scan/scanner';
+import { addVpnHosts, markUserVerified, recheckUrls, setIgnored } from '@/lib/scan/scanner';
 import { browserScanDeps, ensureScanAccess } from '@/lib/scan/request';
 import { getHubCtx } from '@/lib/hubContext';
 import { runBatch } from '@/lib/actions';
@@ -36,7 +36,8 @@ const CONFIG: Record<
 > = {
   broken: {
     title: '失效链接',
-    description: '「域名无法解析」可能是公司内网或需要 VPN 的网站，默认不勾选，连上后可以重新检测。',
+    description:
+      '「域名无法解析」可能是公司内网或需要 VPN 的网站，默认不勾选，连上后可以重新检测。打开看过确认能访问的，点「其实能用」，以后扫描不会再判它失效。',
     empty: '没有失效链接。',
     tone: 'danger',
     defaultSelect: (i) => i.result.failReason === 'not_found',
@@ -124,6 +125,16 @@ export function IssuesView({ kind, bookmarks }: { kind: IssueKind; bookmarks: Bo
       const { db } = await getHubCtx();
       await setIgnored(db, uniqueUrls(issues), on, Date.now());
       toast.success(on ? `已忽略 ${issues.length} 条` : `已取消忽略 ${issues.length} 条`);
+    }, resetSelection);
+
+  // 用户打开看过、确认能访问：标为正常，扫描不再判回失效（Cloudflare 之类会一直挡）
+  const markWorking = (issues: BookmarkIssue[], resetSelection = true) =>
+    withBusy(async () => {
+      const { db } = await getHubCtx();
+      await markUserVerified(db, uniqueUrls(issues), Date.now());
+      toast.success(`已标记 ${issues.length} 条为可以访问`, {
+        action: { label: '撤销', onClick: () => void recheck(issues, false) },
+      });
     }, resetSelection);
 
   const markVpn = (issues: BookmarkIssue[]) =>
@@ -241,6 +252,12 @@ export function IssuesView({ kind, bookmarks }: { kind: IssueKind; bookmarks: Bo
               忽略
             </Button>
             {kind !== 'redirected' && (
+              <Button size="sm" variant="ghost" disabled={busy || selected.length === 0} onClick={() => void markWorking(selected)}>
+                <CircleCheck />
+                其实能用
+              </Button>
+            )}
+            {kind !== 'redirected' && (
               <Button size="sm" variant="ghost" disabled={busy || selected.length === 0} onClick={() => void markVpn(selected)}>
                 <Globe />
                 需要 VPN
@@ -275,6 +292,7 @@ export function IssuesView({ kind, bookmarks }: { kind: IssueKind; bookmarks: Bo
                 busy={busy}
                 onRecheck={() => void recheck([issue], false)}
                 onIgnore={() => void ignore([issue], true, false)}
+                onMarkWorking={kind === 'redirected' ? undefined : () => void markWorking([issue], false)}
               />
             ))}
           </ul>
@@ -329,6 +347,7 @@ function IssueRow({
   busy,
   onRecheck,
   onIgnore,
+  onMarkWorking,
 }: {
   issue: BookmarkIssue;
   tone: PillTone;
@@ -337,6 +356,7 @@ function IssueRow({
   busy: boolean;
   onRecheck: () => void;
   onIgnore: () => void;
+  onMarkWorking?: () => void;
 }) {
   const { bookmark, result } = issue;
   const id = `issue-${bookmark.id}`;
@@ -377,6 +397,18 @@ function IssueRow({
         <Button size="icon" variant="ghost" disabled={busy} aria-label={`重新检测 ${name}`} title="重新检测" onClick={onRecheck}>
           <RefreshCw />
         </Button>
+        {onMarkWorking && (
+          <Button
+            size="icon"
+            variant="ghost"
+            disabled={busy}
+            aria-label={`标记 ${name} 其实能用`}
+            title="其实能用"
+            onClick={onMarkWorking}
+          >
+            <CircleCheck />
+          </Button>
+        )}
         <Button size="icon" variant="ghost" disabled={busy} aria-label={`忽略 ${name}`} title="忽略" onClick={onIgnore}>
           <EyeOff />
         </Button>
