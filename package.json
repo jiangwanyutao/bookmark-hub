@@ -2,7 +2,7 @@
   "name": "bookmark-checkup",
   "description": "检测、清理、整理你的浏览器书签",
   "private": true,
-  "version": "0.1.5",
+  "version": "0.1.6",
   "type": "module",
   "scripts": {
     "dev": "wxt",
