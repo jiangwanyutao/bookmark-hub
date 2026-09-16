@@ -1,9 +1,10 @@
 import { useMemo, useState, type ComponentType, type ReactNode } from 'react';
-import { Activity, CircleDashed, CircleHelp, Copy, CornerUpRight, Link2Off, ShieldCheck, Sparkles } from 'lucide-react';
+import { Activity, CircleDashed, CircleHelp, Copy, CornerUpRight, FolderX, Link2Off, ShieldCheck, Sparkles } from 'lucide-react';
 import { topDomains, type BookmarkIndex, type TreeNode } from '@/lib/bookmarks';
 import { folderTiles } from '@/lib/treemap';
 import { findDuplicateGroups, redundantCount } from '@/lib/duplicates';
 import { healthScore, isUncategorized } from '@/lib/health';
+import { findEmptyFolders } from '@/lib/emptyFolders';
 import { summarizeHealth } from '@/lib/scan/scanner';
 import { useScanResults } from '@/hooks/useScanResults';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,7 @@ import { Lighthouse } from './brand/Lighthouse';
 import { Bookshelf } from './Bookshelf';
 import { CountUp } from './CountUp';
 import { DistributionBars } from './DistributionBars';
+import { EmptyFoldersDialog } from './EmptyFoldersDialog';
 import { Favicon } from './Favicon';
 import { PageHeader, pageLayout } from './PageHeader';
 import { Panel } from './Panel';
@@ -125,6 +127,10 @@ export function Overview({ index, roots, barId, onNavigate, onOpenFolder }: Prop
   const { results, ignored } = useScanResults();
   const domains = topDomains(index.bookmarks, TOP_DOMAIN_LIMIT);
   const [distView, setDistView] = useState<DistView>('bars');
+  const [cleaning, setCleaning] = useState(false);
+  const emptyFolders = useMemo(() => findEmptyFolders(roots), [roots]);
+  // 列表里一项可能连带删掉里面的空子目录，待办上报实际会消失的个数
+  const emptyFolderCount = emptyFolders.reduce((sum, f) => sum + f.folderCount, 0);
 
   const duplicates = useMemo(() => redundantCount(findDuplicateGroups(index.bookmarks)), [index]);
   const health = useMemo(() => summarizeHealth(index.bookmarks, results, ignored), [index, results, ignored]);
@@ -148,7 +154,16 @@ export function Overview({ index, roots, barId, onNavigate, onOpenFolder }: Prop
     health.unscanned,
   );
 
-  const tasks: { phrase: string; hint: string; action: string; count: number; target: Target; icon: Icon }[] = [
+  // target 与 onAction 二选一：大多数待办跳到对应页面，空文件夹就地弹确认框
+  const tasks: { phrase: string; hint: string; action: string; count: number; target?: Target; icon: Icon; onAction?: () => void }[] = [
+    {
+      phrase: `${formatCount(emptyFolderCount)} 个空文件夹`,
+      hint: '里面一个书签都没有，可以删掉',
+      action: '去清理',
+      count: emptyFolderCount,
+      icon: FolderX,
+      onAction: () => setCleaning(true),
+    },
     { phrase: `${formatCount(health.broken)} 个失效链接`, hint: '网页已经打不开，可以删除或忽略', action: '去处理', count: health.broken, target: 'broken', icon: Link2Off },
     { phrase: `${formatCount(duplicates)} 条重复书签`, hint: '同一个网址收藏了不止一次', action: '去清理', count: duplicates, target: 'duplicates', icon: Copy },
     { phrase: `${formatCount(health.redirected)} 个网址已搬家`, hint: '网站换了新地址，可以一键更新', action: '一键更新', count: health.redirected, target: 'redirected', icon: CornerUpRight },
@@ -250,13 +265,13 @@ export function Overview({ index, roots, barId, onNavigate, onOpenFolder }: Prop
               <ul className="flex h-full flex-col divide-y">
                 {openTasks.map((t) => (
                   // 待办少时行不无限拉高，停在上方
-                  <li key={t.target} className="flex max-h-14 min-h-11 flex-1 items-center gap-3 px-4 py-1.5">
+                  <li key={t.phrase} className="flex max-h-14 min-h-11 flex-1 items-center gap-3 px-4 py-1.5">
                     <t.icon className="size-4 shrink-0 text-muted-foreground" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium tabular-nums">{t.phrase}</span>
                       <span className="block truncate text-xs text-muted-foreground">{t.hint}</span>
                     </span>
-                    <Button size="sm" variant="outline" className="shrink-0" onClick={() => onNavigate(t.target)}>
+                    <Button size="sm" variant="outline" className="shrink-0" onClick={t.onAction ?? (() => t.target && onNavigate(t.target))}>
                       {t.action}
                     </Button>
                   </li>
@@ -282,6 +297,8 @@ export function Overview({ index, roots, barId, onNavigate, onOpenFolder }: Prop
           </Panel>
         </div>
       </div>
+
+      <EmptyFoldersDialog folders={emptyFolders} open={cleaning} onOpenChange={setCleaning} />
     </div>
   );
 }

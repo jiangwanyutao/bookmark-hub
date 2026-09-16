@@ -150,6 +150,22 @@ try {
   check((await countByUrl(NEW_URL)) === 1, '导入了文件里的新书签');
   check((await countByUrl(MDN)) === 3, '文件里已收藏过的书签没有重复导入');
 
+  // ---------- 总览：清理空文件夹 ----------
+  await page.evaluate(async () => {
+    const outer = await chrome.bookmarks.create({ parentId: '1', title: '空的外层' });
+    await chrome.bookmarks.create({ parentId: outer.id, title: '空的里层' });
+  });
+  await nav(page, '总览');
+  await page.getByText('2 个空文件夹').waitFor();
+  check(true, '总览把空文件夹列成待办，里层算在外层里');
+  // 右下角的提示浮在待办面板上，会挡住按钮，等它自己消失
+  await page.locator('[data-sonner-toast]').first().waitFor({ state: 'detached', timeout: 15_000 }).catch(() => {});
+  await page.getByRole('listitem').filter({ hasText: '空文件夹' }).getByRole('button', { name: '去清理' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: /^删除 2 个文件夹$/ }).click();
+  await page.getByText('已删除 2 个空文件夹').first().waitFor();
+  const leftFolders = await page.evaluate(async () => (await chrome.bookmarks.getChildren('1')).filter((c) => !c.url).map((c) => c.title));
+  check(!leftFolders.includes('空的外层'), '空文件夹连同里面的空子目录一起删掉');
+
   // ---------- 设置：需要 VPN 的网站 ----------
   await nav(page, '设置');
   // 列表是异步读出来的，等空状态出现，不能立刻判断可见（CI 机器快时会先看到加载前的空白）
