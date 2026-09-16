@@ -118,6 +118,38 @@ try {
   check(exported.startsWith('<!DOCTYPE NETSCAPE-Bookmark-file-1>'), '导出的是浏览器通用书签格式');
   check(exported.includes(`<A HREF="${MDN}"`), '导出内容里有书签链接');
 
+  // 导入：把刚导出的文件再选回来，已有的应全部跳过；再导一个含新书签的文件
+  await page.locator('input[type="file"]').setInputFiles({
+    name: 'chrome-bookmarks.html',
+    mimeType: 'text/html',
+    buffer: Buffer.from(exported, 'utf8'),
+  });
+  await page.getByRole('dialog').waitFor();
+  check(
+    (await page.getByRole('button', { name: '没有要导入的' }).count()) === 1,
+    '导入自己导出的文件时，所有书签都被认成已有',
+  );
+  await page.getByRole('button', { name: '取消' }).click();
+
+  const NEW_URL = 'https://imported.example.com/a';
+  const importHtml = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<DL><p>
+  <DT><H3>来自别的浏览器</H3>
+  <DL><p>
+    <DT><A HREF="${NEW_URL}">新书签</A>
+    <DT><A HREF="${MDN}">MDN 文档</A>
+  </DL><p>
+</DL><p>`;
+  await page.locator('input[type="file"]').setInputFiles({
+    name: 'other-browser.html',
+    mimeType: 'text/html',
+    buffer: Buffer.from(importHtml, 'utf8'),
+  });
+  await page.getByRole('button', { name: /^导入 1 个书签$/ }).click();
+  await page.getByText('已导入 1 个书签').first().waitFor();
+  check((await countByUrl(NEW_URL)) === 1, '导入了文件里的新书签');
+  check((await countByUrl(MDN)) === 3, '文件里已收藏过的书签没有重复导入');
+
   // ---------- 设置：需要 VPN 的网站 ----------
   await nav(page, '设置');
   // 列表是异步读出来的，等空状态出现，不能立刻判断可见（CI 机器快时会先看到加载前的空白）

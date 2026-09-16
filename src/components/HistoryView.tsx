@@ -21,6 +21,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import { ImportBookmarksButton } from './ImportBookmarksButton';
 import { PageHeader, pageLayout } from './PageHeader';
 import { Panel } from './Panel';
 import { Pill } from './Pill';
@@ -118,12 +119,15 @@ export function HistoryView() {
     <div className={pageLayout()}>
       <PageHeader
         title="操作记录"
-        subtitle="每次批量改动都记在这里，可以单独撤销。撤销时会跳过你之后在浏览器里手动改过的书签。"
+        subtitle="每次批量改动都记在这里，可以单独撤销。撤销时会跳过你之后在浏览器里手动改过的书签。想把别的浏览器的书签搬过来，先在那边「导出书签」存成 HTML，再点这里的「导入书签」。"
         actions={
-          <Button variant="outline" onClick={() => void exportBookmarks()}>
-            <Download />
-            导出书签
-          </Button>
+          <>
+            <ImportBookmarksButton />
+            <Button variant="outline" onClick={() => void exportBookmarks()}>
+              <Download />
+              导出书签
+            </Button>
+          </>
         }
       />
 
