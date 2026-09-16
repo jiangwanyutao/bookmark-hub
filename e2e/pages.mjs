@@ -1,4 +1,5 @@
 // 端到端：灌入书签和扫描结果（不发网络请求），走一遍浏览、清理、撤销和设置。
+import fs from 'node:fs';
 import { check, launchExtension, nav, waitUntil } from './helpers.mjs';
 
 const MDN = 'https://developer.mozilla.org/zh-CN/';
@@ -106,6 +107,16 @@ try {
   await page.getByRole('button', { name: '撤销' }).first().click();
   await waitUntil(async () => (await countByUrl(MDN)) === 3, '撤销后三条 MDN 都回来');
   check(true, '撤销清理后重复书签回到原处');
+
+  // 导出备份：拿到浏览器通用格式的书签文件
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: '导出书签' }).click(),
+  ]);
+  check(/^书签备份-\d{4}-\d{2}-\d{2}\.html$/.test(download.suggestedFilename()), `导出的文件名带日期：${download.suggestedFilename()}`);
+  const exported = fs.readFileSync(await download.path(), 'utf8');
+  check(exported.startsWith('<!DOCTYPE NETSCAPE-Bookmark-file-1>'), '导出的是浏览器通用书签格式');
+  check(exported.includes(`<A HREF="${MDN}"`), '导出内容里有书签链接');
 
   // ---------- 设置：需要 VPN 的网站 ----------
   await nav(page, '设置');

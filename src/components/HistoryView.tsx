@@ -1,10 +1,12 @@
 import { useEffect, useState, type ComponentType } from 'react';
 import { toast } from 'sonner';
-import { ArchiveRestore, CircleDot, CornerUpRight, Pencil, Plus, Sparkles, Trash2, Undo2 } from 'lucide-react';
+import { ArchiveRestore, CircleDot, CornerUpRight, Download, Pencil, Plus, Sparkles, Trash2, Undo2 } from 'lucide-react';
+import { browser } from 'wxt/browser';
 import { clockTime, groupByDay, relativeTime } from '@/lib/relativeTime';
 import { buildIndex } from '@/lib/bookmarks';
 import { listBatches, listSnapshots, type Batch, type Op, type Snapshot } from '@/lib/history';
 import { diffSnapshot, toRestoreIntents, type SnapshotDiff } from '@/lib/snapshotDiff';
+import { buildBookmarkHtml, downloadFile, exportFileName } from '@/lib/exportHtml';
 import { getHubCtx } from '@/lib/hubContext';
 import { runBatch, undoWithToast } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
@@ -22,6 +24,19 @@ import { cn } from '@/lib/utils';
 import { PageHeader, pageLayout } from './PageHeader';
 import { Panel } from './Panel';
 import { Pill } from './Pill';
+
+/** 导出成浏览器通用的书签文件，可以直接导回任何浏览器。 */
+async function exportBookmarks() {
+  try {
+    const [root] = await browser.bookmarks.getTree();
+    const roots = root?.children ?? [];
+    const count = buildIndex(roots).bookmarks.length;
+    downloadFile(buildBookmarkHtml(roots), exportFileName(new Date()));
+    toast.success(`已导出 ${count} 个书签`, { description: '这个文件可以在任何浏览器里「导入书签」。' });
+  } catch (e) {
+    toast.error(`导出失败：${e instanceof Error ? e.message : String(e)}`);
+  }
+}
 
 const ACTION_LABEL: Record<Op['action'], string> = {
   REMOVE: '删除',
@@ -101,7 +116,16 @@ export function HistoryView() {
 
   return (
     <div className={pageLayout()}>
-      <PageHeader title="操作记录" subtitle="每次批量改动都记在这里，可以单独撤销。撤销时会跳过你之后在浏览器里手动改过的书签。" />
+      <PageHeader
+        title="操作记录"
+        subtitle="每次批量改动都记在这里，可以单独撤销。撤销时会跳过你之后在浏览器里手动改过的书签。"
+        actions={
+          <Button variant="outline" onClick={() => void exportBookmarks()}>
+            <Download />
+            导出书签
+          </Button>
+        }
+      />
 
       {/* 左右两块等高：操作时间线 + 恢复点，各自在面板内滚动 */}
       <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_24rem]">
