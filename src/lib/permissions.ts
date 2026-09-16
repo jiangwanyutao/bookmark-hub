@@ -16,7 +16,7 @@ export async function requestPermissions(
   } catch (e) {
     console.error('permissions.request failed', e);
     const reason = e instanceof Error ? e.message : String(e);
-    toast.error(`无法申请权限：${reason}。请在 chrome://extensions 里重新加载 Bookmark Hub 后再试。`);
+    toast.error(`无法申请权限：${reason}。请在 chrome://extensions 里重新加载书签体检后再试。`);
     return 'error';
   }
 }

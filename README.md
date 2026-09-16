@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="public/icon-128.png" width="96" alt="Bookmark Hub">
+  <img src="public/icon-128.png" width="96" alt="书签体检">
 </p>
 
-<h2 align="center">Bookmark Hub：检测、清理、整理你的浏览器书签</h2>
+<h2 align="center">书签体检：检测、清理、整理你的浏览器书签</h2>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white" alt="Manifest V3">
@@ -18,7 +18,7 @@
   <img src="docs/images/overview.png" width="90%" alt="总览">
 </p>
 
-收藏了几百上千个书签之后，书签栏往往会变成这样：一半打不开，同一个网址存了三遍，「前端」「前端开发」「Web」分成了好几个目录。Bookmark Hub 是一个浏览器扩展，帮你把书签**查一遍、清一遍、理一遍**。所有改动执行前都会自动创建恢复点，随时可以撤销。
+收藏了几百上千个书签之后，书签栏往往会变成这样：一半打不开，同一个网址存了三遍，「前端」「前端开发」「Web」分成了好几个目录。书签体检是一个浏览器扩展，帮你把书签**查一遍、清一遍、理一遍**。所有改动执行前都会自动创建恢复点，随时可以撤销。
 
 ### ✨ 核心功能
 
@@ -52,17 +52,17 @@ Edge 用户可以直接从商店安装；Chrome 暂未上架，下载构建好�
 
 ### 方式一：Edge 外接程序商店（推荐）
 
-打开 [Bookmark Hub 商店页](https://microsoftedge.microsoft.com/addons/detail/ckcjmknnhkkplknlheppaeogebngaffk)，点「获取」即可安装，之后由 Edge 自动更新。
+打开 [书签体检商店页](https://microsoftedge.microsoft.com/addons/detail/ckcjmknnhkkplknlheppaeogebngaffk)，点「获取」即可安装，之后由 Edge 自动更新。
 
 ### 方式二：下载安装包
 
 1. 打开 [Releases](https://github.com/jiangwanyutao/bookmark-hub/releases/latest)，下载对应浏览器的 zip：
-   - Chrome：`bookmark-hub-<版本>-chrome.zip`
-   - Edge：`bookmark-hub-<版本>-edge.zip`
+   - Chrome：`bookmark-checkup-<版本>-chrome.zip`
+   - Edge：`bookmark-checkup-<版本>-edge.zip`
 2. 把 zip **解压**到一个固定的文件夹（之后不要删除或移动它）
 3. 打开 `chrome://extensions`（Edge 是 `edge://extensions`），打开「开发者模式」
 4. 点「加载已解压的扩展程序」，选择解压出来的文件夹
-5. 点工具栏上的 Bookmark Hub 图标，打开管理页
+5. 点工具栏上的书签体检图标，打开管理页
 
 > 💡 升级时下载新版本，解压覆盖原文件夹，再在扩展页点「重新加载」。书签数据、扫描结果和操作记录都保存在浏览器里，不会丢。
 
@@ -165,7 +165,7 @@ DeepSeek、通义千问、Kimi 等提供 OpenAI 兼容接口的服务都可以�
 
 ## 🔒 隐私与权限
 
-Bookmark Hub 没有服务器，所有数据都留在你的浏览器里。完整说明见 [隐私政策](PRIVACY.md)。
+书签体检没有服务器，所有数据都留在你的浏览器里。完整说明见 [隐私政策](PRIVACY.md)。
 
 | 权限 | 何时申请 | 用途 |
 |---|---|---|
@@ -249,7 +249,7 @@ docs/design-system.md        # 设计规范
 - **软 404 靠标题关键词识别**：返回 200 但页面写着「找不到」的，只能靠标题和落地路径推断，可能漏判。
 - **网络环境会影响结果**：在访问不了境外网站的网络下，大量书签会连接失败。扫描会探测网络状态并提示，公司内网等网站可以加进「需要 VPN 的网站」。
 - **AI 整理的质量取决于模型**：模型需要支持工具调用；方案不满意可以插话调整，执行后也可以撤销。
-- **暂未上架应用商店**，需要以「加载已解压的扩展程序」方式安装，Chrome 启动时可能提示关闭开发者模式扩展，选择保留即可。
+- **Chrome 暂未上架应用商店**，需要以「加载已解压的扩展程序」方式安装，Chrome 启动时可能提示关闭开发者模式扩展，选择保留即可。Edge 可以直接从商店安装。
 
 ---
 

@@ -129,7 +129,7 @@ export function App() {
           <span aria-hidden className="flex size-7 shrink-0 items-end justify-center overflow-hidden rounded-lg bg-[var(--brand-mint)]">
             <Lighthouse className="h-6 w-auto translate-y-0.5" />
           </span>
-          <span className="sr-only xl:not-sr-only">Bookmark Hub</span>
+          <span className="sr-only xl:not-sr-only">书签体检</span>
         </span>
         <div className="relative w-full max-w-md">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />

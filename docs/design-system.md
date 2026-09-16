@@ -1,4 +1,4 @@
-# Bookmark Hub 设计规范
+# 书签体检设计规范
 
 > 适用：扩展 Dashboard（React 19 + shadcn/ui new-york + Tailwind v4 + lucide-react + AI Elements）。
 > 方向：**桌面工具风 + 灯塔品牌色**（2026-09-14 定）。结构与卡片参考 app-shell-ui 的 App Mode（github.com/yg2224/app-shell-ui），主色保留 logo 的薄荷绿，吉祥物是 logo 里的灯塔。
