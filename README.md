@@ -6,7 +6,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white" alt="Manifest V3">
-  <img src="https://img.shields.io/badge/Edge-支持-0078D7?logo=microsoftedge&logoColor=white" alt="Edge">
+  <a href="https://microsoftedge.microsoft.com/addons/detail/ckcjmknnhkkplknlheppaeogebngaffk"><img src="https://img.shields.io/badge/Edge%20外接程序-安装-0078D7?logo=microsoftedge&logoColor=white" alt="Edge 外接程序商店"></a>
   <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black" alt="React 19">
   <img src="https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/WXT-0.21-67A56E" alt="WXT">
@@ -48,9 +48,13 @@
 
 ## 🚀 快速开始
 
-扩展暂未上架应用商店，可以直接下载构建好的安装包，也可以自己构建。
+Edge 用户可以直接从商店安装；Chrome 暂未上架，下载构建好的安装包或自己构建即可。
 
-### 方式一：下载安装包（推荐）
+### 方式一：Edge 外接程序商店（推荐）
+
+打开 [Bookmark Hub 商店页](https://microsoftedge.microsoft.com/addons/detail/ckcjmknnhkkplknlheppaeogebngaffk)，点「获取」即可安装，之后由 Edge 自动更新。
+
+### 方式二：下载安装包
 
 1. 打开 [Releases](https://github.com/jiangwanyutao/bookmark-hub/releases/latest)，下载对应浏览器的 zip：
    - Chrome：`bookmark-hub-<版本>-chrome.zip`
@@ -62,7 +66,7 @@
 
 > 💡 升级时下载新版本，解压覆盖原文件夹，再在扩展页点「重新加载」。书签数据、扫描结果和操作记录都保存在浏览器里，不会丢。
 
-### 方式二：本地构建
+### 方式三：本地构建
 
 需要 [Node.js](https://nodejs.org/) 22+ 和 [pnpm](https://pnpm.io/) 10。
 
