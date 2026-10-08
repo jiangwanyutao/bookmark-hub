@@ -17,11 +17,23 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 
-interface Parsed {
+export interface ImportSource {
   fileName: string;
   /** 文件里解析出来的书签树 */
   roots: ReturnType<typeof parseBookmarkHtml>;
   existingUrls: Set<string>;
+}
+
+/** 解析书签 HTML，并读出已收藏的网址供去重；文件里没有书签时提示并返回 null。 */
+export async function prepareImport(fileName: string, html: string): Promise<ImportSource | null> {
+  const [root] = await browser.bookmarks.getTree();
+  const existingUrls = new Set(buildIndex(root?.children ?? []).bookmarks.map((b) => b.url));
+  const roots = parseBookmarkHtml(html);
+  if (roots.length === 0) {
+    toast.error('这个文件里没有书签', { description: '请选择浏览器「导出书签」生成的 HTML 文件。' });
+    return null;
+  }
+  return { fileName, roots, existingUrls };
 }
 
 /**
@@ -30,36 +42,13 @@ interface Parsed {
  */
 export function ImportBookmarksButton() {
   const fileRef = useRef<HTMLInputElement>(null);
-  const [parsed, setParsed] = useState<Parsed | null>(null);
-  const [skipExisting, setSkipExisting] = useState(true);
-  const [busy, setBusy] = useState(false);
-
-  const plan: ImportPlan | null = parsed && planImport(parsed.roots, parsed.existingUrls, { skipExisting });
+  const [source, setSource] = useState<ImportSource | null>(null);
 
   async function onPick(file: File) {
     try {
-      const [root] = await browser.bookmarks.getTree();
-      const existingUrls = new Set(buildIndex(root?.children ?? []).bookmarks.map((b) => b.url));
-      const roots = parseBookmarkHtml(await file.text());
-      if (roots.length === 0) {
-        toast.error('这个文件里没有书签', { description: '请选择浏览器「导出书签」生成的 HTML 文件。' });
-        return;
-      }
-      setParsed({ fileName: file.name, roots, existingUrls });
+      setSource(await prepareImport(file.name, await file.text()));
     } catch (e) {
       toast.error(`读取失败：${e instanceof Error ? e.message : String(e)}`);
-    }
-  }
-
-  async function confirm() {
-    if (!plan || plan.newCount === 0) return;
-    setBusy(true);
-    try {
-      // 整棵树一条 create，撤销时整体删掉；书签栏 id 固定是 '1'
-      const ok = await runBatch('导入书签', [{ type: 'create', parentId: '1', node: plan.node }], `已导入 ${plan.newCount} 个书签`);
-      if (ok) setParsed(null);
-    } finally {
-      setBusy(false);
     }
   }
 
@@ -80,49 +69,72 @@ export function ImportBookmarksButton() {
         <Upload />
         导入书签
       </Button>
-
-      <Dialog open={parsed !== null} onOpenChange={(open) => !open && setParsed(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>导入 {parsed?.fileName}</DialogTitle>
-            <DialogDescription>
-              {plan && (
-                <>
-                  文件里有 {plan.newCount + (skipExisting ? plan.existingCount : 0)} 个书签
-                  {plan.existingCount > 0 && `，其中 ${plan.existingCount} 个你已经收藏过`}。
-                  导入后会放进「{plan.node.title}」目录，可以在这一页撤销。
-                </>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-
-          <RadioGroup value={skipExisting ? 'skip' : 'all'} onValueChange={(v) => setSkipExisting(v === 'skip')} className="gap-3">
-            <div className="flex items-start gap-3">
-              <RadioGroupItem value="skip" id="import-skip" className="mt-0.5" />
-              <Label htmlFor="import-skip" className="flex-col items-start gap-0.5 font-normal">
-                <span className="font-medium">只导入没有的（推荐）</span>
-                <span className="text-xs text-muted-foreground">已经收藏过的跳过，不会产生重复书签</span>
-              </Label>
-            </div>
-            <div className="flex items-start gap-3">
-              <RadioGroupItem value="all" id="import-all" className="mt-0.5" />
-              <Label htmlFor="import-all" className="flex-col items-start gap-0.5 font-normal">
-                <span className="font-medium">全部导入</span>
-                <span className="text-xs text-muted-foreground">连同已有的一起导入，之后可以在「重复书签」里清理</span>
-              </Label>
-            </div>
-          </RadioGroup>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setParsed(null)}>
-              取消
-            </Button>
-            <Button disabled={busy || plan?.newCount === 0} onClick={() => void confirm()}>
-              {plan?.newCount === 0 ? '没有要导入的' : `导入 ${plan?.newCount ?? 0} 个书签`}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ImportDialog source={source} onClose={() => setSource(null)} />
     </>
+  );
+}
+
+/** 导入确认：只导入没有的或全部导入，整批一个恢复点，可以撤销。 */
+export function ImportDialog({ source, onClose }: { source: ImportSource | null; onClose: () => void }) {
+  const [skipExisting, setSkipExisting] = useState(true);
+  const [busy, setBusy] = useState(false);
+
+  const plan: ImportPlan | null = source && planImport(source.roots, source.existingUrls, { skipExisting });
+
+  async function confirm() {
+    if (!plan || plan.newCount === 0) return;
+    setBusy(true);
+    try {
+      // 整棵树一条 create，撤销时整体删掉；书签栏 id 固定是 '1'
+      const ok = await runBatch('导入书签', [{ type: 'create', parentId: '1', node: plan.node }], `已导入 ${plan.newCount} 个书签`);
+      if (ok) onClose();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={source !== null} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>导入 {source?.fileName}</DialogTitle>
+          <DialogDescription>
+            {plan && (
+              <>
+                文件里有 {plan.newCount + (skipExisting ? plan.existingCount : 0)} 个书签
+                {plan.existingCount > 0 && `，其中 ${plan.existingCount} 个你已经收藏过`}。
+                导入后会放进「{plan.node.title}」目录，可以在这一页撤销。
+              </>
+            )}
+          </DialogDescription>
+        </DialogHeader>
+
+        <RadioGroup value={skipExisting ? 'skip' : 'all'} onValueChange={(v) => setSkipExisting(v === 'skip')} className="gap-3">
+          <div className="flex items-start gap-3">
+            <RadioGroupItem value="skip" id="import-skip" className="mt-0.5" />
+            <Label htmlFor="import-skip" className="flex-col items-start gap-0.5 font-normal">
+              <span className="font-medium">只导入没有的（推荐）</span>
+              <span className="text-xs text-muted-foreground">已经收藏过的跳过，不会产生重复书签</span>
+            </Label>
+          </div>
+          <div className="flex items-start gap-3">
+            <RadioGroupItem value="all" id="import-all" className="mt-0.5" />
+            <Label htmlFor="import-all" className="flex-col items-start gap-0.5 font-normal">
+              <span className="font-medium">全部导入</span>
+              <span className="text-xs text-muted-foreground">连同已有的一起导入，之后可以在「重复书签」里清理</span>
+            </Label>
+          </div>
+        </RadioGroup>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            取消
+          </Button>
+          <Button disabled={busy || plan?.newCount === 0} onClick={() => void confirm()}>
+            {plan?.newCount === 0 ? '没有要导入的' : `导入 ${plan?.newCount ?? 0} 个书签`}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

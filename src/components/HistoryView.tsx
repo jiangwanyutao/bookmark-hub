@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { ImportBookmarksButton } from './ImportBookmarksButton';
+import { WebDavBackupButton } from './WebDavBackupButton';
 import { PageHeader, pageLayout } from './PageHeader';
 import { Panel } from './Panel';
 import { Pill } from './Pill';
@@ -127,6 +128,7 @@ export function HistoryView() {
               <Download />
               导出书签
             </Button>
+            <WebDavBackupButton />
           </>
         }
       />
