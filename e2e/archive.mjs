@@ -60,6 +60,30 @@ try {
   check((await reader.locator('article.reader').innerText()).includes('独特关键词鲸落'), '阅读视图显示存档正文');
   check((await reader.locator('[onerror]').count()) === 0 && !(await page.evaluate(() => window.__pwned)), '存档里的事件脚本被清除、没有执行');
   check((await reader.getByRole('link', { name: '下一篇' }).getAttribute('target')) === '_blank', '正文链接在新标签页打开');
+
+  // ---------- 高亮与批注 ----------
+  await page.evaluate(() => {
+    const article = document.querySelector('article.reader');
+    const p = [...article.querySelectorAll('p')].find((el) => el.textContent === '独特关键词鲸落');
+    const range = document.createRange();
+    range.setStart(p.firstChild, 2);
+    range.setEnd(p.firstChild, 5);
+    getSelection().removeAllRanges();
+    getSelection().addRange(range);
+    article.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+  });
+  await reader.getByRole('button', { name: '高亮选中的文字' }).click();
+  await reader.locator('mark[data-highlight-id]').waitFor();
+  check((await reader.locator('mark[data-highlight-id]').textContent()) === '关键词', '选中的文字变成高亮');
+  await reader.getByRole('textbox', { name: '批注' }).fill('这是批注');
+  await page.keyboard.press('Escape'); // 直接关掉，批注也要已经存下
+  await reader.waitFor({ state: 'detached' });
+  await page.getByRole('button', { name: '阅读' }).click();
+  await reader.locator('mark[data-highlight-id]').waitFor();
+  check((await reader.getByRole('textbox', { name: '批注' }).inputValue()) === '这是批注', '关掉再打开，高亮和批注都还在');
+  await reader.getByRole('button', { name: '删除高亮' }).click();
+  await waitUntil(async () => (await reader.locator('mark').count()) === 0, '删除高亮');
+  check(true, '删除高亮后正文里的标记去掉');
   await page.keyboard.press('Escape');
 
   // ---------- 失败提示 ----------

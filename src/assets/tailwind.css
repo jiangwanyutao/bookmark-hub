@@ -207,4 +207,8 @@
   .reader blockquote { @apply border-l-2 pl-4 text-muted-foreground; }
   .reader table { @apply block overflow-x-auto text-sm; }
   .reader :where(td, th) { @apply border px-2 py-1; }
+  .reader mark {
+    @apply rounded-sm text-foreground;
+    background: color-mix(in srgb, var(--warn-indicator) 35%, transparent);
+  }
 }
