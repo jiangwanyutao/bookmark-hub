@@ -1,4 +1,4 @@
-// @vitest-environment happy-dom
+// @vitest-environment jsdom
 import 'fake-indexeddb/auto';
 import { describe, it, expect } from 'vitest';
 import { decodeHtml, extractArticle, getArchive, saveArchive, type Archive } from './archive';

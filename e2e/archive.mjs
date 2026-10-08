@@ -1,11 +1,12 @@
-// 端到端：网页存档。本地服务冒充一个文章站，验证存档成功与失败提示。GBK 解码在单元测试里覆盖。
+// 端到端：网页存档、阅读视图、全文搜索。本地服务冒充一个文章站。GBK 解码在单元测试里覆盖。
 import http from 'node:http';
 import { check, launchExtension, nav, waitUntil } from './helpers.mjs';
 
 const HOST = 'news.archive-test.example';
 const PARAGRAPH = '归档测试正文，用来让可读性算法认出这是文章主体。'.repeat(20);
 const ARTICLE = `<html><head><meta charset="utf-8"><title>存档测试文章</title></head><body>
-<nav>导航</nav><article><h1>存档测试文章</h1><p>${PARAGRAPH}</p><p>独特关键词鲸落</p></article></body></html>`;
+<nav>导航</nav><article><h1>存档测试文章</h1><p>${PARAGRAPH}</p><p>独特关键词鲸落</p>
+<p><img src="x" onerror="window.__pwned = true"><a href="/next">下一篇</a></p></article></body></html>`;
 
 const server = http.createServer((req, res) => {
   if (req.url === '/post') {
@@ -50,6 +51,16 @@ try {
   await page.getByText(/^已存档 1 个网页$/).waitFor();
   check((await archivedCount()) === 1, '存档成功写入本地');
   check((await page.getByRole('button', { name: '重新存档' }).count()) === 1, '存档后按钮变成「重新存档」');
+
+  // ---------- 阅读视图 ----------
+  await page.getByRole('button', { name: '阅读' }).click();
+  const reader = page.getByRole('dialog');
+  await reader.locator('article.reader').waitFor();
+  check((await reader.getByRole('heading', { name: '存档测试文章' }).count()) >= 1, '阅读视图显示存档标题');
+  check((await reader.locator('article.reader').innerText()).includes('独特关键词鲸落'), '阅读视图显示存档正文');
+  check((await reader.locator('[onerror]').count()) === 0 && !(await page.evaluate(() => window.__pwned)), '存档里的事件脚本被清除、没有执行');
+  check((await reader.getByRole('link', { name: '下一篇' }).getAttribute('target')) === '_blank', '正文链接在新标签页打开');
+  await page.keyboard.press('Escape');
 
   // ---------- 失败提示 ----------
   await page.getByRole('option', { name: /已经没了的页面/ }).click();

@@ -183,3 +183,28 @@
     cursor: pointer;
   }
 }
+
+/* 阅读视图：存档正文没有自带样式，这里给出基本排版 */
+@layer components {
+  .reader {
+    @apply text-[15px] leading-7 break-words;
+  }
+  .reader :where(p, ul, ol, pre, blockquote, figure, table) {
+    @apply my-4;
+  }
+  .reader :where(h1, h2, h3, h4) {
+    @apply mt-6 mb-3 font-semibold tracking-tight;
+  }
+  .reader h1 { @apply text-2xl; }
+  .reader h2 { @apply text-xl; }
+  .reader h3 { @apply text-lg; }
+  .reader :where(ul) { @apply list-disc pl-6; }
+  .reader :where(ol) { @apply list-decimal pl-6; }
+  .reader a { @apply text-primary underline underline-offset-2; }
+  .reader img { @apply h-auto max-w-full rounded; }
+  .reader pre { @apply overflow-x-auto rounded bg-muted p-3 text-sm; }
+  .reader :not(pre) > code { @apply rounded bg-muted px-1 text-sm; }
+  .reader blockquote { @apply border-l-2 pl-4 text-muted-foreground; }
+  .reader table { @apply block overflow-x-auto text-sm; }
+  .reader :where(td, th) { @apply border px-2 py-1; }
+}

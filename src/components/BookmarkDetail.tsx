@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Archive, MousePointerClick } from 'lucide-react';
+import { Archive, BookOpen, MousePointerClick } from 'lucide-react';
 import type { Bookmark, FolderOption } from '@/lib/bookmarks';
 import type { ScanResult } from '@/lib/scan/classify';
 import { HEALTH_META, HealthDot } from './HealthDot';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { BookmarkActions } from './BookmarkActions';
 import { Favicon } from './Favicon';
 import { TagEditor } from './TagEditor';
+import { ReaderDialog } from './ReaderDialog';
 
 interface Props {
   bookmark: Bookmark | undefined;
@@ -25,6 +26,7 @@ const ARCHIVABLE = /^https?:/i;
 
 export function BookmarkDetail({ bookmark, results, folders, tags, onSaveTags, archivedAt, onArchive }: Props) {
   const [archiving, setArchiving] = useState(false);
+  const [reading, setReading] = useState(false);
   if (!bookmark) {
     return (
       <aside className="flex flex-col items-center justify-center gap-3 rounded-xl border bg-card p-6 text-center shadow-card">
@@ -91,23 +93,32 @@ export function BookmarkDetail({ bookmark, results, folders, tags, onSaveTags, a
               <p className="text-xs text-muted-foreground">网页存档</p>
               <p className="mt-0.5">{archivedAt ? `${new Date(archivedAt).toLocaleString('zh-CN')} 存档` : '还没存档'}</p>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={archiving}
-              onClick={async () => {
-                setArchiving(true);
-                try {
-                  await onArchive();
-                } finally {
-                  setArchiving(false);
-                }
-              }}
-            >
-              <Archive />
-              {archivedAt ? '重新存档' : '存档'}
-            </Button>
+            <div className="flex shrink-0 gap-2">
+              {archivedAt && (
+                <Button size="sm" onClick={() => setReading(true)}>
+                  <BookOpen />
+                  阅读
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={archiving}
+                onClick={async () => {
+                  setArchiving(true);
+                  try {
+                    await onArchive();
+                  } finally {
+                    setArchiving(false);
+                  }
+                }}
+              >
+                <Archive />
+                {archivedAt ? '重新存档' : '存档'}
+              </Button>
+            </div>
           </div>
+          <ReaderDialog url={bookmark.url} open={reading} onOpenChange={setReading} />
         </>
       )}
     </aside>
