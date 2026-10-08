@@ -1,9 +1,10 @@
-import type { ReactNode } from 'react';
-import { MousePointerClick } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import { Archive, MousePointerClick } from 'lucide-react';
 import type { Bookmark, FolderOption } from '@/lib/bookmarks';
 import type { ScanResult } from '@/lib/scan/classify';
 import { HEALTH_META, HealthDot } from './HealthDot';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
 import { BookmarkActions } from './BookmarkActions';
 import { Favicon } from './Favicon';
 import { TagEditor } from './TagEditor';
@@ -15,9 +16,15 @@ interface Props {
   folders: FolderOption[];
   tags: string[];
   onSaveTags: (tags: string[]) => Promise<void>;
+  /** 存档时间，没存档过为 undefined */
+  archivedAt: number | undefined;
+  onArchive: () => Promise<void>;
 }
 
-export function BookmarkDetail({ bookmark, results, folders, tags, onSaveTags }: Props) {
+const ARCHIVABLE = /^https?:/i;
+
+export function BookmarkDetail({ bookmark, results, folders, tags, onSaveTags, archivedAt, onArchive }: Props) {
+  const [archiving, setArchiving] = useState(false);
   if (!bookmark) {
     return (
       <aside className="flex flex-col items-center justify-center gap-3 rounded-xl border bg-card p-6 text-center shadow-card">
@@ -76,6 +83,33 @@ export function BookmarkDetail({ bookmark, results, folders, tags, onSaveTags }:
       </dl>
       <Separator className="my-5" />
       <TagEditor key={`tags-${bookmark.id}`} tags={tags} onSave={onSaveTags} />
+      {ARCHIVABLE.test(bookmark.url) && (
+        <>
+          <Separator className="my-5" />
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0 text-sm">
+              <p className="text-xs text-muted-foreground">网页存档</p>
+              <p className="mt-0.5">{archivedAt ? `${new Date(archivedAt).toLocaleString('zh-CN')} 存档` : '还没存档'}</p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={archiving}
+              onClick={async () => {
+                setArchiving(true);
+                try {
+                  await onArchive();
+                } finally {
+                  setArchiving(false);
+                }
+              }}
+            >
+              <Archive />
+              {archivedAt ? '重新存档' : '存档'}
+            </Button>
+          </div>
+        </>
+      )}
     </aside>
   );
 }

@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { listFolders, searchBookmarks, sortBookmarks, type BookmarkIndex, type SortKey, type TreeNode } from '@/lib/bookmarks';
 import { useTags } from '@/hooks/useTags';
 import { useScanResults } from '@/hooks/useScanResults';
+import { useArchives } from '@/hooks/useArchives';
+import { Archive } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { FolderTree } from './FolderTree';
 import { BookmarkList } from './BookmarkList';
 import { BookmarkDetail } from './BookmarkDetail';
@@ -44,6 +47,7 @@ export function BookmarksView({ roots, index, query, folderId, onSelectFolder, o
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const { tags, save: saveTags } = useTags();
   const { results } = useScanResults();
+  const { dates: archivedAt, archive } = useArchives();
   const [sortKey, setSortKey] = useState<SortKey>(loadSort);
   const [healthFilter, setHealthFilter] = useState<HealthFilter>(ALL);
   const [tagFilter, setTagFilter] = useState<string>(ALL);
@@ -61,6 +65,7 @@ export function BookmarksView({ roots, index, query, folderId, onSelectFolder, o
       (tagFilter === ALL || (tags.get(b.url) ?? []).includes(tagFilter)),
   );
   const visible = sortBookmarks(searchBookmarks(filtered, query, tags), sortKey);
+  const unarchived = [...new Set(visible.map((b) => b.url))].filter((url) => /^https?:/i.test(url) && !archivedAt.has(url));
   // 书签在浏览器里被删掉后，这里自然变成 undefined
   const selected = index.bookmarks.find((b) => b.id === selectedId);
   const folderName = folderId ? (folders.find((f) => f.id === folderId)?.path ?? '目录') : '全部书签';
@@ -133,6 +138,12 @@ export function BookmarksView({ roots, index, query, folderId, onSelectFolder, o
                 </SelectContent>
               </Select>
             )}
+            {unarchived.length > 0 && (
+              <Button size="sm" variant="ghost" className="ml-auto" onClick={() => void archive(unarchived)}>
+                <Archive />
+                存档列表里未存档的 {unarchived.length.toLocaleString('zh-CN')} 个
+              </Button>
+            )}
           </div>
           <BookmarkList
             bookmarks={visible}
@@ -158,6 +169,8 @@ export function BookmarksView({ roots, index, query, folderId, onSelectFolder, o
           onSaveTags={async (next) => {
             if (selected) await saveTags([[selected.url, next]]);
           }}
+          archivedAt={selected ? archivedAt.get(selected.url) : undefined}
+          onArchive={() => (selected ? archive([selected.url]) : Promise.resolve())}
         />
       </div>
     </div>

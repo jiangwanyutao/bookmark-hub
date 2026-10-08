@@ -3,6 +3,7 @@ import type { Batch, IdMapping, Snapshot } from './history';
 import type { ScanResult } from './scan/classify';
 import type { IgnoredUrl, ScanRun, VpnHost } from './scan/scanner';
 import type { BookmarkTags } from './ai/tags';
+import type { Archive } from './archive';
 
 export interface HubDB extends DBSchema {
   batches: { key: string; value: Batch; indexes: { createdAt: number } };
@@ -14,10 +15,11 @@ export interface HubDB extends DBSchema {
   ignoredUrls: { key: string; value: IgnoredUrl };
   vpnHosts: { key: string; value: VpnHost };
   tags: { key: string; value: BookmarkTags };
+  archives: { key: string; value: Archive };
 }
 
 const DB_NAME = 'bookmark-hub';
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 
 export function openHubDB() {
   return openDB<HubDB>(DB_NAME, DB_VERSION, {
@@ -39,6 +41,9 @@ export function openHubDB() {
       }
       if (oldVersion < 5) {
         db.createObjectStore('tags', { keyPath: 'url' });
+      }
+      if (oldVersion < 6) {
+        db.createObjectStore('archives', { keyPath: 'url' });
       }
     },
   });
