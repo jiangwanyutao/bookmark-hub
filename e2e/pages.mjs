@@ -63,6 +63,21 @@ try {
   check((await page.getByRole('option', { selected: true }).count()) === 1, '方向键移动选中一条书签');
   check((await page.locator('aside dt').first().textContent()) === '健康状态', '详情第一项是健康状态');
 
+  // ---------- 全部书签：筛选与排序 ----------
+  const pickOption = async (trigger, option) => {
+    await page.getByRole('combobox', { name: trigger }).click();
+    await page.getByRole('option', { name: option, exact: true }).click();
+  };
+  // 下拉框关闭动画期间页面其余部分是 aria-hidden，按角色查不到，改用选择器
+  const listTitles = () => page.locator('[role=listbox][aria-label="书签"] [role=option] span.font-medium').allTextContents();
+  await pickOption('健康状态', '失效');
+  check((await listTitles()).length === 2, '按健康状态筛出 2 个失效书签');
+  await pickOption('健康状态', '全部状态');
+  await pickOption('排序', '按标题');
+  const sorted = await listTitles();
+  check(sorted[0] === '公司内部 Wiki' && sorted.at(-1) === 'React 文档', `按标题排序（中文按拼音在前）：${sorted.join('、')}`);
+  await pickOption('排序', '书签栏顺序');
+
   // ---------- 失效链接：部分选中、行内忽略 ----------
   await nav(page, '失效链接');
   const selectAll = page.locator('#select-all-broken');

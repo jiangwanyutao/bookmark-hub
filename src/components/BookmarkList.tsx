@@ -22,7 +22,7 @@ interface Props {
   results: Map<string, ScanResult>;
   selectedId: string | null;
   onSelect: (id: string) => void;
-  /** 有搜索词或选了目录时，空状态给一个清空按钮 */
+  /** 有搜索词、筛选条件或选了目录时，空状态给一个清空按钮 */
   onClearFilters?: () => void;
 }
 
@@ -44,7 +44,7 @@ export function BookmarkList({ bookmarks, tags, results, selectedId, onSelect, o
           <SearchX className="size-6" />
         </div>
         <p className="text-sm font-medium">没有匹配的书签</p>
-        <p className="max-w-xs text-sm text-muted-foreground">换个关键词，或在左侧选择其他目录。</p>
+        <p className="max-w-xs text-sm text-muted-foreground">换个关键词、调整筛选，或在左侧选择其他目录。</p>
         {onClearFilters && (
           <Button size="sm" variant="outline" onClick={onClearFilters}>
             清空筛选

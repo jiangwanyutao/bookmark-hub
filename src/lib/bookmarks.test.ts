@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildIndex, getDomain, listFolders, searchBookmarks, topDomains, type TreeNode } from './bookmarks';
+import { buildIndex, getDomain, listFolders, searchBookmarks, sortBookmarks, topDomains, type TreeNode } from './bookmarks';
 
 // 结构与 chrome.bookmarks.getTree() 一致：一个无标题根节点，下面是浏览器内置目录
 const tree: TreeNode[] = [
@@ -129,5 +129,38 @@ describe('listFolders', () => {
       { id: '2', path: '其他书签' },
       { id: '20', path: '其他书签 / 空目录' },
     ]);
+  });
+});
+
+describe('sortBookmarks', () => {
+  const b = (id: string, title: string, url: string, dateAdded?: number) => ({
+    id,
+    title,
+    url,
+    domain: new URL(url).hostname,
+    folderPath: '',
+    ancestorIds: [],
+    dateAdded,
+    searchText: '',
+  });
+  const list = [b('1', 'Zed', 'https://b.com', 2), b('2', 'apple', 'https://c.com'), b('3', 'Banana', 'https://a.com', 5)];
+  const order = (key: Parameters<typeof sortBookmarks>[1]) => sortBookmarks(list, key).map((x) => x.id);
+
+  it('keeps tree order by default and does not mutate the input', () => {
+    expect(order('tree')).toEqual(['1', '2', '3']);
+    sortBookmarks(list, 'title');
+    expect(list.map((x) => x.id)).toEqual(['1', '2', '3']);
+  });
+
+  it('sorts by date added, unknown dates last', () => {
+    expect(order('newest')).toEqual(['3', '1', '2']);
+    expect(order('oldest')).toEqual(['1', '3', '2']);
+  });
+
+  it('sorts by title and by domain', () => {
+    expect(order('title')).toEqual(['2', '3', '1']);
+    expect(order('domain')).toEqual(['3', '1', '2']);
+    const zh = [b('1', '中文', 'https://a.com'), b('2', '阿里', 'https://a.com')];
+    expect(sortBookmarks(zh, 'title').map((x) => x.id)).toEqual(['2', '1']);
   });
 });

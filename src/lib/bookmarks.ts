@@ -124,3 +124,21 @@ export function searchBookmarks(bookmarks: Bookmark[], query: string, tags?: Map
     return terms.every((t) => text.includes(t));
   });
 }
+
+export type SortKey = 'tree' | 'newest' | 'oldest' | 'title' | 'domain';
+
+const collator = new Intl.Collator('zh-CN', { sensitivity: 'base', numeric: true });
+
+/** 返回排好序的新数组；tree 保持书签树里的顺序。没有添加时间的排在最后。 */
+export function sortBookmarks(bookmarks: Bookmark[], key: SortKey): Bookmark[] {
+  if (key === 'tree') return bookmarks;
+  const byDate = (sign: number) => (a: Bookmark, b: Bookmark) =>
+    a.dateAdded === undefined ? 1 : b.dateAdded === undefined ? -1 : sign * (a.dateAdded - b.dateAdded);
+  const compare = {
+    newest: byDate(-1),
+    oldest: byDate(1),
+    title: (a: Bookmark, b: Bookmark) => collator.compare(a.title, b.title),
+    domain: (a: Bookmark, b: Bookmark) => collator.compare(a.domain, b.domain),
+  }[key];
+  return [...bookmarks].sort(compare);
+}
