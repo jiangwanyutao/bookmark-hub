@@ -61,6 +61,13 @@ try {
   // ---------- 批量存档：列表里只剩失败的那个 ----------
   await waitUntil(async () => (await page.getByRole('button', { name: /存档列表里未存档的 1 个/ }).count()) === 1, '批量存档按钮只算未存档的');
   check(true, '批量存档按钮只算未存档的');
+
+  // ---------- 全文搜索：关键词只在存档正文里 ----------
+  await page.locator('#search').fill('鲸落');
+  const hits = page.locator('[role=listbox][aria-label="书签"] [role=option]');
+  await waitUntil(async () => (await hits.count()) === 1, '搜索存档正文命中');
+  check((await hits.first().textContent()).includes('存档测试文章'), '搜索只在存档正文里出现的词能找到书签');
+  await page.locator('#search').fill('');
 } catch (e) {
   check(false, e instanceof Error ? e.message : String(e));
 } finally {

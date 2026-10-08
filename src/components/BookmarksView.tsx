@@ -47,7 +47,7 @@ export function BookmarksView({ roots, index, query, folderId, onSelectFolder, o
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const { tags, save: saveTags } = useTags();
   const { results } = useScanResults();
-  const { dates: archivedAt, archive } = useArchives();
+  const { dates: archivedAt, texts: archiveTexts, archive } = useArchives();
   const [sortKey, setSortKey] = useState<SortKey>(loadSort);
   const [healthFilter, setHealthFilter] = useState<HealthFilter>(ALL);
   const [tagFilter, setTagFilter] = useState<string>(ALL);
@@ -64,7 +64,7 @@ export function BookmarksView({ roots, index, query, folderId, onSelectFolder, o
       (healthFilter === ALL || healthOf(b.url) === healthFilter) &&
       (tagFilter === ALL || (tags.get(b.url) ?? []).includes(tagFilter)),
   );
-  const visible = sortBookmarks(searchBookmarks(filtered, query, tags), sortKey);
+  const visible = sortBookmarks(searchBookmarks(filtered, query, tags, archiveTexts), sortKey);
   const unarchived = [...new Set(visible.map((b) => b.url))].filter((url) => /^https?:/i.test(url) && !archivedAt.has(url));
   // 书签在浏览器里被删掉后，这里自然变成 undefined
   const selected = index.bookmarks.find((b) => b.id === selectedId);

@@ -9,14 +9,17 @@ const ARCHIVE_CONCURRENCY = 4;
 // 同一网站一次只下载一个，免得被限流
 const ARCHIVE_PER_SITE = 1;
 
-/** 读取存档时间（网址 → 存档时间），批量存档网页。 */
+/** 读取存档时间和全文搜索用的正文（都按网址），批量存档网页。 */
 export function useArchives() {
   const [dates, setDates] = useState<Map<string, number>>(new Map());
+  const [texts, setTexts] = useState<Map<string, string>>(new Map());
 
   const reload = useCallback(async () => {
     const { db } = await getHubCtx();
+    // ponytail: 一次读出全部存档（含正文 HTML）；存档上万条内存吃紧时把 text 拆到单独的表
     const all = await db.getAll('archives');
     setDates(new Map(all.map((a) => [a.url, a.archivedAt])));
+    setTexts(new Map(all.map((a) => [a.url, a.text.toLowerCase()])));
   }, []);
 
   useEffect(() => {
@@ -60,5 +63,5 @@ export function useArchives() {
     [reload],
   );
 
-  return { dates, archive };
+  return { dates, texts, archive };
 }

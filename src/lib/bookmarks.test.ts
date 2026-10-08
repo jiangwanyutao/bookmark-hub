@@ -118,6 +118,13 @@ describe('searchBookmarks', () => {
     expect(ids(searchBookmarks(bookmarks, 'react 教程', tags))).toEqual(['101']);
     expect(ids(searchBookmarks(bookmarks, 'llm'))).toEqual([]);
   });
+
+  it('matches archived page text, each term may hit a different field', () => {
+    const texts = new Map([['https://github.com', 'where the world builds software']]);
+    expect(ids(searchBookmarks(bookmarks, 'builds', undefined, texts))).toEqual(['11']);
+    expect(ids(searchBookmarks(bookmarks, 'github world', undefined, texts))).toEqual(['11']);
+    expect(ids(searchBookmarks(bookmarks, 'builds'))).toEqual([]);
+  });
 });
 
 describe('listFolders', () => {

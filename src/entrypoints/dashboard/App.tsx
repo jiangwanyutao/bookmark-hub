@@ -140,7 +140,7 @@ export function App() {
             type="search"
             aria-label="搜索书签"
             aria-keyshortcuts={IS_MAC ? 'Meta+K /' : 'Control+K /'}
-            placeholder={view === 'bookmarks' ? '搜索标题、网址、目录…' : '搜索标题、网址、目录，回车查看…'}
+            placeholder={view === 'bookmarks' ? '搜索标题、网址、标签、存档正文…' : '搜索标题、网址、标签、存档正文，回车查看…'}
             className="h-9 rounded-md bg-card pl-9"
             value={query}
             onChange={(e) => setQuery(e.target.value)}

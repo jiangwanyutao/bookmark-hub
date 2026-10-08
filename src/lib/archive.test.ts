@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import 'fake-indexeddb/auto';
 import { describe, it, expect } from 'vitest';
-import { decodeHtml, extractArticle, saveArchive, listArchiveTexts, type Archive } from './archive';
+import { decodeHtml, extractArticle, getArchive, saveArchive, type Archive } from './archive';
 import { openHubDB } from './db';
 
 const encode = (s: string) => new TextEncoder().encode(s);
@@ -56,12 +56,12 @@ describe('extractArticle', () => {
 });
 
 describe('archive store', () => {
-  it('saves by url and lists lowercase texts for search', async () => {
+  it('saves by url, a re-archive replaces the old copy', async () => {
     const db = await openHubDB();
     const archive: Archive = { url: 'https://a.com/', title: 'A', content: '<p>Hello</p>', text: 'Hello World', archivedAt: 1 };
     await saveArchive(db, archive);
     await saveArchive(db, { ...archive, text: 'Hello Again', archivedAt: 2 });
     expect(await db.count('archives')).toBe(1);
-    expect(await listArchiveTexts(db)).toEqual(new Map([['https://a.com/', 'hello again']]));
+    expect((await getArchive(db, 'https://a.com/'))?.text).toBe('Hello Again');
   });
 });

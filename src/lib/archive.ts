@@ -85,11 +85,3 @@ export const saveArchive = (db: IDBPDatabase<HubDB>, archive: Archive) => db.put
 
 export const getArchive = (db: IDBPDatabase<HubDB>, url: string) => db.get('archives', url);
 
-/**
- * 网址 → 小写正文，全文搜索用。
- * ponytail: 一次读出全部存档（含正文 HTML）；存档上万条内存吃紧时把 text 拆到单独的表
- */
-export async function listArchiveTexts(db: IDBPDatabase<HubDB>): Promise<Map<string, string>> {
-  const all = await db.getAll('archives');
-  return new Map(all.map((a) => [a.url, a.text.toLowerCase()]));
-}
